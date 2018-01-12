@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>QWERKael&#39;s Blog</title>
+  
+  <subtitle>Was macht mich nicht umbringt, macht mich stärker!</subtitle>
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="https://qwerkael.cn/"/>
+  <updated>2018-01-11T03:08:24.000Z</updated>
+  <id>https://qwerkael.cn/</id>
+  
+  <author>
+    <name>QWERKael</name>
+    
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>解决ProxySQL连接MySQL产生大量TIME_WAIT连接的问题</title>
+    <link href="https://qwerkael.cn/2018/01/10/%E8%A7%A3%E5%86%B3ProxySQL%E8%BF%9E%E6%8E%A5MySQL%E4%BA%A7%E7%94%9F%E5%A4%A7%E9%87%8FTIME_WAIT%E8%BF%9E%E6%8E%A5%E7%9A%84%E9%97%AE%E9%A2%98/"/>
+    <id>https://qwerkael.cn/2018/01/10/解决ProxySQL连接MySQL产生大量TIME_WAIT连接的问题/</id>
+    <published>2018-01-10T08:44:35.000Z</published>
+    <updated>2018-01-11T03:08:24.000Z</updated>
+    
+    <content type="html"><![CDATA[<blockquote><p>有时候解决一个问题很简单，但是其中发现问题和深入问题的过程却值得我们反复思考</p></blockquote><h3 id="出现了问题"><a href="#出现了问题" class="headerlink" title="出现了问题"></a>出现了问题</h3><p>最近在测试环境新搭的一套<code>proxysql</code>忽然无法正常登录了，一直提示连接<code>hostgroup</code>超时。</p><p>我首先跳过<code>proxysql</code>，直接连接后端的<code>mysql</code>节点，确认是<code>proxysql</code>的问题还是<code>mysql</code>的问题。</p><p>但是连接一直处于进行中的状态，不提示登录成功也不提示登录失败。</p><h3 id="初步判断和尝试解决"><a href="#初步判断和尝试解决" class="headerlink" title="初步判断和尝试解决"></a>初步判断和尝试解决</h3><p>初步判断应该是<code>mysql</code>的连接数被打满了。</p><p>使用命令查看连接数</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">netstat -naplt|grep 6033|wc -l</span><br></pre></td></tr></table></figure><p>连接数显示<code>mysql</code>的连接已经被占满了。</p><p>由于后端的<code>mysql</code>节点只通过<code>proxysql</code>来访问，其他的程序并不知道<code>mysql</code>实例的端口号，所以尝试重启<code>proxysql</code>来释放连接。</p><p>再次尝试连接后端<code>mysql</code>节点，这次直接提示连接数过多，连接失败。</p><p>显然，重启<code>proxysql</code>并没有成功的解决问题。</p><h3 id="挖掘问题并再次尝试解决"><a href="#挖掘问题并再次尝试解决" class="headerlink" title="挖掘问题并再次尝试解决"></a>挖掘问题并再次尝试解决</h3><p>仔细查看<code>netstat</code>输出的信息。</p><p>发现绝大部分的连接都是<code>TIME_WAIT</code>。</p><p>之后，通过重启<code>mysql</code>暂时的清理掉了这些连接，但是，首先，重启<code>mysql</code>的成本过高，在线上根本不可行，其次，暂时清理掉<code>TIME_WAIT</code>的连接之后，<code>TIME_WAIT</code>的连接数又很快的涨了上来。这并没有从根本上解决问题。</p><p>尝试通过<code>proxysql</code>的参数进行连接数限制，但是，<code>TIME_WAIT</code>状态的连接根本不被计算在<code>proxysql</code>的连接中，无法被限制。</p><h3 id="查阅资料暂时解决了问题"><a href="#查阅资料暂时解决了问题" class="headerlink" title="查阅资料暂时解决了问题"></a>查阅资料暂时解决了问题</h3><p>查询了相关资料后，发现可以通过修改<code>Linux内核参数</code>来优化<code>TCP连接</code>。</p><p>编辑<code>/etc/sysctl.conf</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；</span><br><span class="line">net.ipv4.tcp_tw_reuse = 1 </span><br><span class="line"><span class="meta">#</span> 表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭。</span><br><span class="line">net.ipv4.tcp_tw_recycle = 1 </span><br><span class="line"><span class="meta">#</span> 表示如果套接字由本端要求关闭，这个参数决定了它保持在FIN-WAIT-2状态的时间。</span><br><span class="line">net.ipv4.tcp_fin_timeout = 30 </span><br><span class="line"><span class="meta">#</span> 表示系统同时保持TIME_WAIT套接字的最大数量，如果超过这个数字，TIME_WAIT套接字将立刻被清除并打印警告信息。</span><br><span class="line">net.ipv4.tcp_max_tw_buckets = 400</span><br></pre></td></tr></table></figure><p>通过开启<code>tcp复用</code>，<code>tcp快速回收</code>，修改<code>tcp fin超时时间</code>依然无法降低<code>TIME_WAIT</code>连接的数量。</p><p>最后，通过修改<code>TIME_WAIT</code>的最大保持数量，将<code>TIME_WAIT</code>的连接数量控制在<code>mysql</code>的最大连接数以内，暂时保证了<code>mysql</code>的可用性。</p><p>但是，我们依然并没有从根本解决问题。</p><h3 id="深入了解TIME-WAIT连接尝试解决问题"><a href="#深入了解TIME-WAIT连接尝试解决问题" class="headerlink" title="深入了解TIME_WAIT连接尝试解决问题"></a>深入了解<code>TIME_WAIT</code>连接尝试解决问题</h3><p>为了解决问题，我们先了解一下<code>TIME_WAIT</code>是什么。</p><p><img src="/images/tcp_conn.jpg" alt="tcp_conn"></p><p>在关闭<code>TCP</code>连接的四次握手中，<code>客户端</code>先向<code>服务器端</code>发送<code>FIN</code>报文，告诉服务器端“我要断开连接了”，<code>服务器端</code>收到<code>FIN</code>后会回复一个<code>ACK</code>，表示收到断开连接的请求，但此时<code>服务器端</code>可能仍有数据未发送完，当服务器将数据发送完成后，<code>服务器端</code>会发送一个<code>FIN</code>报文，表示可以断开连接，<code>客户端</code>接收到<code>FIN</code>报文以后会发送一个<code>ACK</code>报文，此时<code>客户端</code>会发送一个<code>ACK</code>报文，然后<code>客户端</code>进入<code>TIME_WAIT</code>状态，当等待<code>2MSL（两个最大报文段生存时间）</code>之后，如果没有再接收到<code>服务器端</code>的请求，连接就会自动断开。</p><p>换句话说，当连接进入<code>TIME_WAIT</code>状态以后，我们不需要做任何事情，也无法做任何事情，我们所能做的唯一的事情就是等待一段时间以后，<code>TIME_WAIT</code>的连接就会自动断开。</p><p>所以<code>TIME_WAIT</code>的问题并不是连接没有被释放，而是这些<code>TIME_WAIT</code>的连接被创建的太多了。</p><p>由于在该环境中，<code>mysql</code>只有<code>proxysql</code>在连接，所以我尝试修改了一些<code>proxysql</code>中关于连接的参数<code>mysql-free_connections_pct</code>、<code>mysql-max_stmts_per_connection</code>等，但是依然无效。</p><h3 id="问题解决和总结"><a href="#问题解决和总结" class="headerlink" title="问题解决和总结"></a>问题解决和总结</h3><p>最后，该问题的解决是通过修复<code>mysql</code>中<code>monitor</code>用户而解决的。</p><p><code>monitor</code>用户是<code>proxysql</code>用以监控<code>mysql</code>的用户，<code>proxysql</code>会定时调用该用户从<code>mysql</code>中获取数据。而在<code>mysql</code>中该用户其实并没有被正确的创建，虽然在一开始我就从<code>log</code>中发现了这个问题，但是我并不认为这会导致<code>mysql</code>节点不可用，所以就忽略了这问题。但是，没有想到，虽然<code>monitor</code>用户无法正常的连接到<code>mysql</code>，但是会创建一个<code>TIME_WAIT</code>的连接。而且，由于不同的尝试连接，导致连接数过大，造成<code>mysql</code>无法使用。</p><p>在解决了问题之后，又通过简单的<code>python</code>程序验证了这一状况。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> mysql.connector</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100</span>):</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        conn1 = mysql.connector.connect(user=<span class="string">'aaa'</span>, password=<span class="string">'aaa'</span>, host=<span class="string">'10.10.6.7'</span>, port=<span class="number">33070</span>)</span><br><span class="line">    <span class="keyword">except</span> (mysql.connector.errors.ProgrammingError) <span class="keyword">as</span> e:</span><br><span class="line">        print(i + <span class="number">1</span>, <span class="string">" : "</span>, e)</span><br><span class="line">print(<span class="string">"the end"</span>)</span><br></pre></td></tr></table></figure><p>然后，通过监控<code>TIME_WAIT</code>数量，发现虽然连接都失败了，但是每一次尝试连接都会产生一个<code>TIME_WAIT</code>的连接。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;blockquote&gt;
+&lt;p&gt;有时候解决一个问题很简单，但是其中发现问题和深入问题的过程却值得我们反复思考&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;出现了问题&quot;&gt;&lt;a href=&quot;#出现了问题&quot; class=&quot;headerlink&quot; title=&quot;出现了问题&quot;&gt;&lt;/
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="proxysql" scheme="https://qwerkael.cn/tags/proxysql/"/>
+    
+      <category term="tcp" scheme="https://qwerkael.cn/tags/tcp/"/>
+    
+      <category term="TIME_WAIT" scheme="https://qwerkael.cn/tags/TIME-WAIT/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>yaourt/pacman加速3连</title>
+    <link href="https://qwerkael.cn/2018/01/08/yaourt-pacman%E5%8A%A0%E9%80%9F3%E8%BF%9E/"/>
+    <id>https://qwerkael.cn/2018/01/08/yaourt-pacman加速3连/</id>
+    <published>2018-01-08T03:49:45.000Z</published>
+    <updated>2018-01-08T07:13:08.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>这两天更新包的时候感觉速度有点慢，于是就做了一些优化改进，顺手总结一下</p><ol><li><p>改源</p><p>将下载源改成国内源是最常见的一种，不过<code>Arch</code>一般在安装的时候就会进行改源操作。</p><p>在<code>/etc/pacman.d/mirrorlist</code>中包含的源已经很全了，我们只需要将不需要的一些国外源注释掉或者删掉就行了。</p><p>另外，我们一般也会添加一下<code>archlinuxcn</code>的镜像源。</p><p>只需要修改一下<code>/etc/pacman.conf</code>文件，在最底下添加</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[archlinuxcn]</span><br><span class="line">Server = https://mirrors.ustc.edu.cn/archlinuxcn/$arch</span><br></pre></td></tr></table></figure><p>然后安装一下<code>archlinuxcn-keyring</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yaourt -S archlinuxcn-keyring</span><br></pre></td></tr></table></figure></li><li><p>并行</p><p><code>pacman</code>默认是使用<code>wget</code>进行下载的，我们可以在配置中，将它改为其他的多线程下载工具</p><p>编辑配置文件<code>/etc/pacman.conf</code>，添加以下参数</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">XferCommand = /usr/bin/aria2c -s 5 %u</span><br></pre></td></tr></table></figure><p>可以调节<code>-s</code>后面的参数，修改并行数</p></li><li><p>加代理</p><p>有时候我们下载国外网站的一些包的时候可能需要科学上网，下面提供一种方法可以让命令行通过<code>ss</code>进行科学上网</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 安装privoxy</span><br><span class="line">sudo pacman -S privoxy</span><br><span class="line"><span class="meta">#</span> 编辑配置文件</span><br><span class="line">sudo vim /etc/privoxy/config</span><br><span class="line"><span class="meta">#</span> 在文件中添加一行（最后有一个点，别漏了）</span><br><span class="line">forward-socks5 / 127.0.0.1:7070 .</span><br><span class="line"><span class="meta">#</span> 启动privoxy服务</span><br><span class="line">sudo systemctl start privoxy.service</span><br><span class="line"><span class="meta">#</span> 配置环境变量</span><br><span class="line">export https_proxy=127.0.0.1:8118</span><br><span class="line">export http_proxy=127.0.0.1:8118</span><br></pre></td></tr></table></figure><p>​</p></li></ol>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;这两天更新包的时候感觉速度有点慢，于是就做了一些优化改进，顺手总结一下&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;改源&lt;/p&gt;
+&lt;p&gt;将下载源改成国内源是最常见的一种，不过&lt;code&gt;Arch&lt;/code&gt;一般在安装的时候就会进行改源操作。&lt;/p&gt;
+&lt;p&gt;在&lt;code&gt;/etc/pa
+      
+    
+    </summary>
+    
+    
+      <category term="Linux日常" scheme="https://qwerkael.cn/tags/Linux%E6%97%A5%E5%B8%B8/"/>
+    
+      <category term="Archlinux" scheme="https://qwerkael.cn/tags/Archlinux/"/>
+    
+      <category term="pacman" scheme="https://qwerkael.cn/tags/pacman/"/>
+    
+      <category term="yaourt" scheme="https://qwerkael.cn/tags/yaourt/"/>
+    
+      <category term="cli" scheme="https://qwerkael.cn/tags/cli/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>安装合集</title>
+    <link href="https://qwerkael.cn/2018/01/03/%E5%AE%89%E8%A3%85%E5%90%88%E9%9B%86/"/>
+    <id>https://qwerkael.cn/2018/01/03/安装合集/</id>
+    <published>2018-01-03T02:28:47.000Z</published>
+    <updated>2018-01-03T03:05:15.000Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】"><a href="#汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】" class="headerlink" title="汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】"></a>汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】</h3><h4 id="EPEL【yum】"><a href="#EPEL【yum】" class="headerlink" title="EPEL【yum】"></a>EPEL【yum】</h4><p><code>epel</code>几乎是<code>CentOS</code>的必备很多软件和依赖都可以在<code>epel</code>中找到</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install epel-release</span><br></pre></td></tr></table></figure><h4 id="MySQL【yum】"><a href="#MySQL【yum】" class="headerlink" title="MySQL【yum】"></a>MySQL【yum】</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 安装 Percona 仓库</span><br><span class="line">yum install http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm </span><br><span class="line"><span class="meta">#</span> mysql5.7 </span><br><span class="line">yum install Percona-Server-client-57 Percona-Server-devel-57 Percona-Server-server-57 Percona-Server-shared-57 </span><br><span class="line"><span class="meta">#</span> mysql5.6 </span><br><span class="line">yum install Percona-Server-client-56 Percona-Server-devel-56 Percona-Server-server-56 Percona-Server-shared-56 </span><br><span class="line"><span class="meta">#</span> 相关的软件和工具 </span><br><span class="line">yum install percona-xtrabackup-24 percona-toolkit </span><br><span class="line"><span class="meta">#</span> mysql5.7的一些准备工作</span><br><span class="line"><span class="meta">#</span> mysql5.7中使用了一些新的密码策略，所以我们的配置会麻烦一些</span><br><span class="line"><span class="meta">#</span> mysql5.7中，root用户是有初始密码的，改密码存在mysql的错误日志中</span><br><span class="line"><span class="meta">$</span> grep "password" /var/log/mysqld.log</span><br><span class="line">2017-06-17T12:25:17.375581Z 1 [Note] A temporary password is generated for root@localhost: cul+b=F7vF*o</span><br><span class="line"><span class="meta">#</span> mysql5.7中会检查密码的复杂度，简单的密码无法被设置，我们可以关闭该策略，在生产环境中不建议这么做</span><br><span class="line">set global validate_password_policy=0;</span><br><span class="line"><span class="meta">#</span> 虽然我们可以设置简单的密码了，但是mysql对于密码的长度还是有要求的，该值也可以被修改，同步不建议在生产环境这么做</span><br><span class="line">set global validate_password_length=1;</span><br><span class="line"><span class="meta">#</span> 然后我们就可以修改root用户的密码了</span><br><span class="line">ALTER USER USER() IDENTIFIED BY '123456';</span><br></pre></td></tr></table></figure><h4 id="Redis【yum】"><a href="#Redis【yum】" class="headerlink" title="Redis【yum】"></a>Redis【yum】</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> Redis在epel中就有，不过版本一般比较老，要安装新版的redis可以在remi源中找</span><br><span class="line"><span class="meta">#</span> 安装 remi 源</span><br><span class="line"><span class="meta">#</span> CentOS6版本的remi源</span><br><span class="line">yum install https://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-6.rpm </span><br><span class="line"><span class="meta">#</span> CentOS7版本的remi源</span><br><span class="line">yum install https://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-7.rpm </span><br><span class="line"><span class="meta">#</span> 启用remi，并查看可以安装的redis版本</span><br><span class="line">yum --enablerepo=remi list redis --showduplicates</span><br><span class="line"><span class="meta">#</span> 选择合适的版本安装就可以了，软件名和版本号之间用“-”链接</span><br></pre></td></tr></table></figure>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】&quot;&gt;&lt;a href=&quot;#汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】&quot; class=&quot;headerlink&quot; title=&quot;汇总了一些常见软件的安装命令，复制即用，炒鸡简单【Cen
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="安装" scheme="https://qwerkael.cn/tags/%E5%AE%89%E8%A3%85/"/>
+    
+      <category term="redis" scheme="https://qwerkael.cn/tags/redis/"/>
+    
+      <category term="centos" scheme="https://qwerkael.cn/tags/centos/"/>
+    
+      <category term="yum" scheme="https://qwerkael.cn/tags/yum/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用Navicat链接proxysql无法进行用户管理</title>
+    <link href="https://qwerkael.cn/2017/12/28/%E4%BD%BF%E7%94%A8Navicat%E9%93%BE%E6%8E%A5proxysql%E6%97%A0%E6%B3%95%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E7%AE%A1%E7%90%86/"/>
+    <id>https://qwerkael.cn/2017/12/28/使用Navicat链接proxysql无法进行用户管理/</id>
+    <published>2017-12-28T03:13:50.000Z</published>
+    <updated>2017-12-28T07:38:14.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>今天使用<code>Navicat</code> 链接<code>proxysql</code>修改后端数据库用户权限的时候，莫名其妙的出现了一个报警</p><p><img src="/images/err_msg.png" alt="err_msg"></p><p>这个问题在之前并没有遇到过，看这个描述，因该是找不到<code>password</code>字段，初步的猜测是在<code>proxysql</code>中设置的<code>mysql版本号</code>和实际连接的<code>mysql版本号</code>不一致，而恰巧这两个版本中记录<code>mysql用户信息</code>的表结构也不一致，导致<code>Navicat</code>根据错误的版本号使用了错误的查询语句，最后导致查询报错。</p><p>随后我查询的<code>proxysql</code>中标记的版本号，和后端连接的<code>mysql</code>的版本号，发现这两个值确实不一致，而直接连接后端的数据库访问用户管理项的时候，也没有报错。</p><p>那么事情就好办了，修改一下<code>proxysql</code>的<code>mysql-server_version</code>然后<code>load mysql variables to run;</code>，完结，撒花～</p><p>…</p><p>…</p><p>但是事情永远不可能向你想象中的那么顺利，<code>load</code>之后，报错依旧。</p><p>这。。。</p><p>好，祭出牛刀，<code>tcpflow</code></p><p><code>tcpflow</code>和<code>tcpdump</code>差不多，都是抓包的，但是个人感觉比<code>tcpdump</code>好用</p><p>怎么安装就不说了，我本地是<code>ArchLinux</code>，直接<code>yaourt</code>就可以了，<code>CentOS</code>的我以后可能会写篇文章单独讲。</p><p>直接上命令，查看发往<code>proxysql</code>的流量</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> sudo tcpflow -c -p -i any dst port 3306</span><br></pre></td></tr></table></figure><p>于是可以看到，当我们在<code>Navicat</code>上点击用户表单的时候，会向<code>mysql</code>发送一条命令</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">user</span>, host, <span class="keyword">password</span>, ssl_type, ssl_cipher, x509_issuer, x509_subject, max_questions, max_updates, max_connections, super_priv, max_user_connections <span class="keyword">FROM</span> mysql.user <span class="keyword">ORDER</span> <span class="keyword">BY</span> <span class="keyword">user</span></span><br></pre></td></tr></table></figure><p>这里会查询一个<code>password</code>字段，而当我们直接连接后端的<code>mysql</code>节点的时候，发送的请求是</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">user</span>, host, authentication_string, ssl_type, ssl_cipher, x509_issuer, x509_subject, max_questions, max_updates, max_connections, super_priv, max_user_connections, <span class="keyword">plugin</span>, password_expired, password_lifetime <span class="keyword">FROM</span> mysql.user <span class="keyword">ORDER</span> <span class="keyword">BY</span> <span class="keyword">user</span></span><br></pre></td></tr></table></figure><p>注意，这里已经没有了<code>password</code>字段，取而代之的是<code>authentication_string</code>字段，这就是<code>5.6</code>版本和<code>5.7</code>版本的区别。</p><p>但是我明明已经将<code>proxysql</code>中的版本号改掉，并且<code>load</code>了，但是为什么没有生效？！</p><p>好吧，可能是<code>bug</code>吧，事实上<code>proxysql</code>虽然号称可以试试修改配置项，但是实际操作中配置项修改后不能实时生效的绝对不知这一处，比如修改<code>监听端口</code>就需要重启服务才能生效。</p><p>那么我们保存配置<code>save mysql variables to disk;</code></p><p>然后重启服务</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> service proxysql restart</span><br></pre></td></tr></table></figure><p>再次用<code>Navicat</code>访问用户表单，终于正常了。</p><p>整个总结下来就两个字<code>坑爹</code></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;今天使用&lt;code&gt;Navicat&lt;/code&gt; 链接&lt;code&gt;proxysql&lt;/code&gt;修改后端数据库用户权限的时候，莫名其妙的出现了一个报警&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/images/err_msg.png&quot; alt=&quot;err_msg&quot;&gt;&lt;/p&gt;
+&lt;p&gt;这
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="Q&amp;A" scheme="https://qwerkael.cn/tags/Q-A/"/>
+    
+      <category term="proxysql" scheme="https://qwerkael.cn/tags/proxysql/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用cachecloud和codis搭建redis环境</title>
+    <link href="https://qwerkael.cn/2017/12/27/%E4%BD%BF%E7%94%A8cachecloud%E5%92%8Ccodis%E6%90%AD%E5%BB%BAredis%E7%8E%AF%E5%A2%83/"/>
+    <id>https://qwerkael.cn/2017/12/27/使用cachecloud和codis搭建redis环境/</id>
+    <published>2017-12-27T09:08:58.000Z</published>
+    <updated>2018-01-04T04:39:51.000Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="简单的介绍："><a href="#简单的介绍：" class="headerlink" title="简单的介绍："></a>简单的介绍：</h3><h4 id="CacheCloud："><a href="#CacheCloud：" class="headerlink" title="CacheCloud："></a><a href="https://github.com/sohutv/cachecloud" target="_blank" rel="noopener"><code>CacheCloud</code></a>：</h4><p><code>CacheCloud</code>是由<code>souhutv</code>开源一套<code>Redis</code>的管理系统，可以帮助我们自动化的搭建和运维<code>Redis</code>，<code>Cachecloud</code>可以自动部署和管理3种形式的<code>Redis</code>方案，包括<code>单实例Redis</code>，<code>Redis+Sentinel</code>以及<code>Redis的原生集群方案Redis Cluster</code></p><h4 id="Codis："><a href="#Codis：" class="headerlink" title="Codis："></a><a href="https://github.com/CodisLabs/codis" target="_blank" rel="noopener"><code>Codis</code></a>：</h4><p><code>Codis</code>是由<code>豌豆荚</code>开源的一套<code>Redis</code>集群方案，是通过<code>proxy</code>路由到不同分片来实现的<code>redis集群</code></p><h3 id="Codis安装："><a href="#Codis安装：" class="headerlink" title="Codis安装："></a>Codis安装：</h3><h4 id="1-安装Go环境"><a href="#1-安装Go环境" class="headerlink" title="1. 安装Go环境"></a>1. 安装Go环境</h4><p>在Go语言的<a href="https://golang.org/dl/" target="_blank" rel="noopener">下载页面</a>选择一个你要使用的安装包下载。我选择的是1.9.2版本。<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz</span><br></pre></td></tr></table></figure></p><p>修改<code>/etc/profile</code>文件<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">export GOROOT=/data/go/</span><br><span class="line">export PATH=$PATH:/$GOROOT/bin</span><br></pre></td></tr></table></figure></p><p>重新加载<code>/etc/profile</code><br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">source /etc/profile</span><br></pre></td></tr></table></figure></p><p>查看Go是否安装成功<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> go version</span><br><span class="line">go version go1.9.2 linux/amd64</span><br></pre></td></tr></table></figure></p><h4 id="2-安装Codis"><a href="#2-安装Codis" class="headerlink" title="2. 安装Codis"></a>2. 安装Codis</h4><p>首先我们需要知道<code>GOPATH</code>的路径<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> go env GOPATH</span><br><span class="line">/root/go</span><br></pre></td></tr></table></figure></p><p>Go安装成功后，GOPATH会在<code>～/go</code>目录下，我这值我们也可以进行修改，比如，修改为<code>/data/gopath</code><br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export GOPATH=/data/gopath</span><br></pre></td></tr></table></figure></p><p>然后我们需要将codis的代码<code>clone</code>到指定的目录下<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> mkdir -p $GOPATH/src/github.com/CodisLabs</span><br><span class="line"><span class="meta">$</span> cd $GOPATH/src/github.com/CodisLabs</span><br><span class="line"><span class="meta">$</span> git clone https://github.com/CodisLabs/codis.git -b release3.2</span><br></pre></td></tr></table></figure></p><p>获取到源码后，我们只需要<code>make</code>一下就可以了<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> cd codis</span><br><span class="line"><span class="meta">$</span> make</span><br><span class="line">make -j4 -C extern/redis-3.2.11/</span><br><span class="line">make[1]: 进入目录“/data/gopath/src/github.com/CodisLabs/codis/extern/redis-3.2.11”</span><br><span class="line">cd src &amp;&amp; make all</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p><p>在这个过程中你可能需要安装一些工具，比如<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum groupinstall "Development Tools"</span><br></pre></td></tr></table></figure></p><p>在安装过程中可能会遇到如下的错误</p><blockquote><p>zmalloc.h:50:31: 致命错误：jemalloc/jemalloc.h：没有那个文件或目录</p></blockquote><p>这是因为没有找到<code>jemalloc</code>内存管理器的缘故，<br>我们可以在编译的时候指定其他的内存管理<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make MALLOC=libc</span><br></pre></td></tr></table></figure></p><p>但是相比<code>jemalloc</code>，其他的内存管理器可能会造成更多的内存碎片（<code>mem_fragmentation_ratio</code>）<br>当然，为了更好的性能，我们自然会选择<code>jemalloc</code>，那么我们就需要安装<code>jemalloc</code>了，但是如果我们现在使用<code>yum</code>安装，可以依然会编译codis报错，因为<code>jemalloc</code>没有被安装到指定的目录，而在redis的安装包里redis自己就为我们提供一个<code>deps</code>目录，里面就有<code>jemalloc</code>和其他一些依赖的安装包。<br>但是codis的目录下为我们提供了多个版本的redis，我们需要使用那个呢？<br>刚才我们在<code>make</code>的时候，第一行输出是<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make -j4 -C extern/redis-3.2.11/</span><br></pre></td></tr></table></figure></p><p>这里我们就可以进入该目录，直接编译<code>deps</code>下的所有依赖<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd extern/redis-3.2.11/deps</span><br><span class="line">make hiredis jemalloc linenoise lua geohash-int</span><br></pre></td></tr></table></figure></p><p>再次回到原目录，编译成功</p><h3 id="启动Codis："><a href="#启动Codis：" class="headerlink" title="启动Codis："></a>启动Codis：</h3><p>启动<code>Codis</code>会用到zk或者etctd，这里我使用的是zk</p><h4 id="安装JDK和ZOOKEEPER"><a href="#安装JDK和ZOOKEEPER" class="headerlink" title="安装JDK和ZOOKEEPER"></a>安装JDK和ZOOKEEPER</h4><p><code>JDK</code>可以直接使用<code>yum</code>安装<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel</span><br></pre></td></tr></table></figure></p><p>安装完<code>JDK</code>记得要配置环境变量，不然可能会导致一些程序不可用<br><code>vim /etc/profile</code><br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>set java environment  </span><br><span class="line">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.151-1.b12.el6_9.x86_64</span><br><span class="line">PATH=$PATH:$JAVA_HOME/bin</span><br><span class="line">CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar</span><br><span class="line">export JAVA_HOME  CLASSPATH  PATH</span><br></pre></td></tr></table></figure></p><p>加载一下配置文件<code>source  /etc/profile</code></p><p>ZOOKEEPER需要从官网下载安装包，我部署的是单节点的，解压后直接启动就可以<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">wget http://mirror.bit.edu.cn/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz</span><br><span class="line">tar -zxf zookeeper-3.4.11.tar.gz</span><br><span class="line">cd zookeeper-3.4.11/conf</span><br><span class="line">cp zoo_sample.cfg zoo.cfg</span><br><span class="line">cd zookeeper-3.4.11/bin</span><br><span class="line">./zkServer.sh start</span><br></pre></td></tr></table></figure></p><h4 id="配置与启动"><a href="#配置与启动" class="headerlink" title="配置与启动"></a>配置与启动</h4><p><img src="/images/codis_architecture.png" alt="codis架构图"></p><p>如上图，Codis集群架构可以分为几个部分</p><p>最核心的是<code>codis-dashboard</code>和<code>codis-proxy</code></p><ul><li><code>codis-dashboard</code>是<code>codis</code>的集群管理工具，可以管理<code>codis-proxy</code>、<code>codis-server</code>和<code>Redis-sentinel</code></li><li><code>codis-proxy</code>负责<code>codis</code>集群中的代理工作，负责将<code>redis</code>命令路由到不同的分片</li><li><code>codis-fe</code>是<code>codis-dashboard</code>的<code>web</code>管理界面，可以更方便、更形象的管理集群</li><li><code>codis-serer</code>是在<code>redis-server</code>基础上增加了<code>codis</code>相关命令而形成的另一个分支</li></ul><p>现在我们要启动<code>Codis</code></p><p>我们先进入<code>codis</code>的配置文件目录<code>/data/gopath/src/github.com/CodisLabs/codis/config</code>修改<code>codis-dashboard</code>的配置文件，<code>codis-dashboard</code>默认使用<code>filesystem</code>作为外部存储，我们将其修改为<code>zookeeper</code>。</p><p>然后将<code>product_name</code>修改为该我们的<code>codis集群</code>的名字，这里我们改成<code>codis-test</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> Set Coordinator, only accept "zookeeper" &amp; "etcd" &amp; "filesystem".</span><br><span class="line"><span class="meta">#</span> for zookeeper/etcd, coorinator_auth accept "user:password" </span><br><span class="line"><span class="meta">#</span> Quick Start</span><br><span class="line"><span class="meta">#</span> coordinator_name = "filesystem"</span><br><span class="line"><span class="meta">#</span> coordinator_addr = "/tmp/codis"</span><br><span class="line">coordinator_name = "zookeeper"</span><br><span class="line">coordinator_addr = "127.0.0.1:2181"</span><br><span class="line"><span class="meta">#</span>coordinator_auth = ""</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> Set Codis Product Name/Auth.</span><br><span class="line">product_name = "codis-test"</span><br><span class="line">product_auth = ""</span><br></pre></td></tr></table></figure><p>现在启动<code>codis-dashboard</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nohup ./bin/codis-dashboard --ncpu=4 --config=config/dashboard.toml --log=logs/dashboard.log --log-level=WARN &amp;</span><br></pre></td></tr></table></figure><p>这里我新建了一个<code>logs</code>目录来存放日志</p><p><code>codis-proxy</code>也有相应的配置文件，这里我只是简单的修改了一下<code>product_name</code>，然后启动相关的服务</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 启动 codis-proxy</span><br><span class="line">nohup ./bin/codis-proxy --ncpu=4 --config=config/proxy.toml --log=logs/proxy.log --log-level=WARN &amp;</span><br><span class="line"><span class="meta">#</span> 启动 codis-fe，这里监听的是8080端口</span><br><span class="line">nohup ./bin/codis-fe --ncpu=4 --log=logs/fe.log --log-level=WARN --zookeeper=127.0.0.1:2181 --listen=0.0.0.0:8080 &amp;</span><br></pre></td></tr></table></figure><p>现在我们已经可以访问管理页面了</p><p>进入管理界面中，我们先添加一个<code>proxy</code></p><p><img src="/images/add_codis_proxy.png" alt="添加codis-proxy"></p><p>接下来我们就可以添加<code>codis-server</code>和<code>sentinel</code>了，但是在那之前，我们先安装一下<code>CacheCloud</code></p><h3 id="安装CacheCloud："><a href="#安装CacheCloud：" class="headerlink" title="安装CacheCloud："></a>安装CacheCloud：</h3><p>我们先从<del>gayhub</del> github上 的获取源码</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd /opt</span><br><span class="line">git clone https://github.com/sohutv/cachecloud.git</span><br></pre></td></tr></table></figure><p>由于程序需要用到<code>maven</code>，我们需要先安装<code>maven</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo</span><br><span class="line">yum -y install apache-maven</span><br></pre></td></tr></table></figure><p>现在我们需要修改一下配置文件，配置一下使用的<code>mysql</code>和监听的端口</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> vim /opt/cachecloud/cachecloud-open-web/src/main/swap/online.properties</span><br><span class="line">cachecloud.db.url = jdbc:mysql://127.0.0.1:3306/cache-cloud</span><br><span class="line">cachecloud.db.user = admin</span><br><span class="line">cachecloud.db.password = 123456</span><br><span class="line">cachecloud.maxPoolSize = 20</span><br><span class="line"></span><br><span class="line">isClustered = true</span><br><span class="line">isDebug = false</span><br><span class="line">spring-file=classpath:spring/spring-online.xml</span><br><span class="line">log_base=/opt/cachecloud-web/logs</span><br><span class="line">web.port=8585</span><br><span class="line">log.level=WARN</span><br></pre></td></tr></table></figure><p>启动<code>cachecloud</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 进入cachecloud的根目录</span><br><span class="line">cd /opt/cachecloud</span><br><span class="line"><span class="meta">#</span> 运行maven</span><br><span class="line">mvn clean compile install -Ponline</span><br><span class="line"><span class="meta">#</span> 新建cachecloud-web目录</span><br><span class="line">mkdir /opt/cachecloud-web</span><br><span class="line"><span class="meta">#</span> 拷贝war包、配置文件和启动脚本</span><br><span class="line">cp /opt/cachecloud/cachecloud-open-web/target/cachecloud-open-web-1.0-SNAPSHOT.war /opt/cachecloud-web</span><br><span class="line">cp /opt/cachecloud/cachecloud-open-web/src/main/resources/cachecloud-web.conf /opt/cachecloud-web</span><br><span class="line">cp /opt/cachecloud/script/st*.sh /opt/cachecloud-web</span><br><span class="line"><span class="meta">#</span> 初始化数据库</span><br><span class="line">mysql -uadmin -p -D'cache-cloud' &lt; /opt/cachecloud/script/cachecloud.sql</span><br><span class="line"><span class="meta">#</span> 启动</span><br><span class="line">sh /opt/cachecloud-web/start.sh</span><br></pre></td></tr></table></figure><p>如果你发现启动脚本运行的时间很长，可能是已经报错了，<code>tail</code>一下日志</p><p>如果报<code>Unrecognized VM option &#39;UnlockCommercialFeatures&#39;</code>的错误，在启动脚本中将<code>-XX:+UnlockCommercialFeatures -XX:+FlightRecorder</code>去掉即可</p><h3 id="使用CacheCloud和配置Redis："><a href="#使用CacheCloud和配置Redis：" class="headerlink" title="使用CacheCloud和配置Redis："></a>使用CacheCloud和配置Redis：</h3><p>在<code>cachecloud</code>的<code>script</code>目录下有一个初始化脚本<code>cachecloud-init.sh</code></p><p>这个脚本有3个作用：</p><ol><li>创建<code>cachecloud</code>项目的用户</li><li>创建<code>cachecloud</code>项目的相关目录</li><li>安装<code>redis</code></li></ol><p>将这个脚本拷贝到需要管理的机器上，然后执行</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./cachecloud-init.sh username</span><br></pre></td></tr></table></figure><p>此处的<code>username</code>是你用于创建管理<code>redis</code>的用户名</p><p>执行后，你需要输入两次密码</p><p>使用管理员账号进入<code>web</code>管理页面，在<code>管理后台</code>&gt;<code>机器管理</code>中添加我们初始化后的机器</p><p>接着，我们可以使用任意账号在<code>应用申请</code>界面申请<code>redis</code>服务</p><p><code>cachecloud</code>提供3种<code>redis</code>服务</p><ol><li>单节点<code>redis</code></li><li><code>Redis-Sentinel</code></li><li>原生的<code>Redis-Cluster</code>集群</li></ol><p>申请了我们需要的<code>redis</code>服务之后，管理员就可以在<code>管理后台</code>&gt;<code>流程审批</code>界面分配<code>redis</code>服务了</p><h3 id="使用CacheCloud配置Codis集群"><a href="#使用CacheCloud配置Codis集群" class="headerlink" title="使用CacheCloud配置Codis集群"></a>使用CacheCloud配置Codis集群</h3><h4 id="为codis添加redis-server"><a href="#为codis添加redis-server" class="headerlink" title="为codis添加redis-server"></a>为codis添加redis-server</h4><p>值得注意的是，<code>Codis</code>集群不能直接使用<code>Redis-Server</code>，我们需要使用<code>codis</code>安装目录下的<code>codis-server</code>替换掉<code>PATH</code>路径下的<code>redis-server</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cp codis-server /usr/bin/redis-server</span><br><span class="line">cp codis-server /usr/local/bin/redis-server</span><br></pre></td></tr></table></figure><p>这样我们使用<code>CacheCloud</code>创建的就是<code>codis-server</code>了</p><p>现在我们在<code>CacheCloud</code>中创建两个单节点<code>redis</code>，然后在<code>管理后台</code>&gt;<code>流程审批</code>&gt;<code>应用运维</code>中为两个<code>redis</code>分别配置<code>slave</code></p><p>现在我们得到了两对<code>redis</code>主从，然后我们进入<code>Codis</code>的管理界面，在<code>Group</code>中将这两对主从添加为两组<code>Group</code>，再在<code>Slots</code>中点击<code>Reblance All Slots</code></p><p>至此<code>Codis</code>集群就搭建完成了</p><p>现在我们为<code>Codis</code>集群添加<code>Sentinel</code></p><h4 id="为什么要手动启动sentinel"><a href="#为什么要手动启动sentinel" class="headerlink" title="为什么要手动启动sentinel"></a>为什么要手动启动sentinel</h4><p>需要说明的一点是，我们可以在<code>CacheCloud</code>中可以直接配置<code>Redis-Sentinel</code>集群，似乎我们直接在<code>CacheCloud</code>中配置好<code>Redis-Sentinel</code>集群，然后将配置好的<code>redis</code>和<code>sentinel</code>添加到<code>codis</code>中，这样更简单。但是这样做是不可行的。</p><p>正常情况下，添加了<code>sentinel</code>的<code>codis</code>集群在<code>redis-server主节点</code>宕机后，<code>codis-proxy</code>会自动<code>failover</code>到<code>redis-server从节点</code>。</p><p>但是，但是如果<code>codis</code>添加的是通过<code>cachecloud</code>生成的<code>sentinel</code>，则由于<code>cachecloud</code>和<code>codis</code>都对<code>sentinel</code>进行了配置，导致<code>sentinel</code>对同一套主从侦测了两次，在<code>redis-server主节点</code>宕机后，<code>sentinel</code>的<code>cachecloud</code>配置生效，而<code>codis</code>配置不生效，所以<code>codis-proxy</code>无法正常<code>failover</code>。</p><p>所以在<code>cachecloud</code>和<code>codis</code>联合使用时，不要在<code>codis</code>中配置<code>cachecloud</code>生成的<code>sentinel</code>。</p><p>而为<code>codis</code>单独配置<code>sentinel</code>也很简单。</p><h4 id="添加sentinel"><a href="#添加sentinel" class="headerlink" title="添加sentinel"></a>添加sentinel</h4><p>首先创建一个简单的配置文件</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> vim sentinel.conf </span><br><span class="line">port 26379</span><br><span class="line">dir /tmp</span><br><span class="line">protected-mode no # 较早的redis版本不需要该参数</span><br></pre></td></tr></table></figure><p>然后启动<code>sentinel</code></p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-server sentinel.conf --sentinel &amp;</span><br></pre></td></tr></table></figure><p>然后我们添加<code>sentinel</code>的地址添加到<code>codis</code>配置页面的<code>sentinels</code>配置项中即可。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;简单的介绍：&quot;&gt;&lt;a href=&quot;#简单的介绍：&quot; class=&quot;headerlink&quot; title=&quot;简单的介绍：&quot;&gt;&lt;/a&gt;简单的介绍：&lt;/h3&gt;&lt;h4 id=&quot;CacheCloud：&quot;&gt;&lt;a href=&quot;#CacheCloud：&quot; class=&quot;header
+      
+    
+    </summary>
+    
+    
+      <category term="redis" scheme="https://qwerkael.cn/tags/redis/"/>
+    
+      <category term="codis" scheme="https://qwerkael.cn/tags/codis/"/>
+    
+      <category term="cachecloud" scheme="https://qwerkael.cn/tags/cachecloud/"/>
+    
+      <category term="集群" scheme="https://qwerkael.cn/tags/%E9%9B%86%E7%BE%A4/"/>
+    
+      <category term="安装部署" scheme="https://qwerkael.cn/tags/%E5%AE%89%E8%A3%85%E9%83%A8%E7%BD%B2/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OpenTSDB 的安装与部署</title>
+    <link href="https://qwerkael.cn/2017/12/25/OpenTSDB-%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E9%83%A8%E7%BD%B2/"/>
+    <id>https://qwerkael.cn/2017/12/25/OpenTSDB-的安装与部署/</id>
+    <published>2017-12-25T09:06:02.000Z</published>
+    <updated>2017-12-25T10:36:10.000Z</updated>
+    
+    <content type="html"><![CDATA[<h4 id="安装-JDK"><a href="#安装-JDK" class="headerlink" title="安装 JDK"></a>安装 JDK</h4><p>jdk直接使用<code>yum</code>安装，原因嘛～我懒！<br><figure class="highlight shell"><figcaption><span>jdk安装</span><a href="https://qwerkael.github.io" target="_blank" rel="noopener">QWERKael</a></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel</span><br></pre></td></tr></table></figure></p><p>安装完<code>jdk</code>记得要配置环境变量，不然可能会导致一些程序不可用<br><code>vim /etc/profile</code><br><figure class="highlight shell"><figcaption><span>配置环境变量</span><a href="https://qwerkael.github.io" target="_blank" rel="noopener">QWERKael</a></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>set java environment  </span><br><span class="line">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.151-1.b12.el6_9.x86_64</span><br><span class="line">PATH=$PATH:$JAVA_HOME/bin</span><br><span class="line">CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar</span><br><span class="line">export JAVA_HOME  CLASSPATH  PATH</span><br></pre></td></tr></table></figure></p><p>加载一下配置文件<code>source  /etc/profile</code></p><h4 id="安装-HBase"><a href="#安装-HBase" class="headerlink" title="安装 HBase"></a>安装 HBase</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget http://mirrors.shuosc.org/apache/hbase/1.4.0/hbase-1.4.0-bin.tar.gz# 下载hbase，我用的是1.4版本的</span><br></pre></td></tr></table></figure>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h4 id=&quot;安装-JDK&quot;&gt;&lt;a href=&quot;#安装-JDK&quot; class=&quot;headerlink&quot; title=&quot;安装 JDK&quot;&gt;&lt;/a&gt;安装 JDK&lt;/h4&gt;&lt;p&gt;jdk直接使用&lt;code&gt;yum&lt;/code&gt;安装，原因嘛～我懒！&lt;br&gt;&lt;figure class=&quot;hi
+      
+    
+    </summary>
+    
+    
+      <category term="opentsdb" scheme="https://qwerkael.cn/tags/opentsdb/"/>
+    
+      <category term="安装" scheme="https://qwerkael.cn/tags/%E5%AE%89%E8%A3%85/"/>
+    
+      <category term="时序数据库" scheme="https://qwerkael.cn/tags/%E6%97%B6%E5%BA%8F%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>tilda 无法设置透明模式</title>
+    <link href="https://qwerkael.cn/2017/12/25/tilda-%E6%97%A0%E6%B3%95%E8%AE%BE%E7%BD%AE%E9%80%8F%E6%98%8E%E6%A8%A1%E5%BC%8F/"/>
+    <id>https://qwerkael.cn/2017/12/25/tilda-无法设置透明模式/</id>
+    <published>2017-12-25T03:45:41.000Z</published>
+    <updated>2018-01-12T07:26:25.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>一觉醒来打开电脑，发现日常使用的<code>tilda</code>终端忽然无法显示<code>透明</code>特效了。</p><p>重新进入<code>首选项</code>进行配置，但是根本不管用。</p><p>google一下，发现<code>github</code>上有相关的<a href="https://github.com/lanoxx/tilda/issues/228" target="_blank" rel="noopener"><code>issue</code></a>。</p><p>有人说是<code>配置文件</code>的问题。但是我修改配置文件后依然无效。</p><p>有人说是<code>系统设置</code>的问题。于是打开<code>系统设置</code>（不同的电脑设置的不一样，我是 <code>Arch</code> + <code>KDE</code>）搜索<code>composit（混合器）</code>，点进去就发现有报错，说是后端渲染OpenGL崩溃了，在该页面重新配置OpenGL，应用配置。</p><p><img src="/images/opengl_err.png" alt="opengl_err"></p><p>然后关闭<code>tilda</code>重新打开，<code>tilda</code>又可以显示<code>透明</code>特效了。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;一觉醒来打开电脑，发现日常使用的&lt;code&gt;tilda&lt;/code&gt;终端忽然无法显示&lt;code&gt;透明&lt;/code&gt;特效了。&lt;/p&gt;
+&lt;p&gt;重新进入&lt;code&gt;首选项&lt;/code&gt;进行配置，但是根本不管用。&lt;/p&gt;
+&lt;p&gt;google一下，发现&lt;code&gt;github&lt;/co
+      
+    
+    </summary>
+    
+    
+      <category term="tilda" scheme="https://qwerkael.cn/tags/tilda/"/>
+    
+      <category term="terminal" scheme="https://qwerkael.cn/tags/terminal/"/>
+    
+      <category term="Linux日常" scheme="https://qwerkael.cn/tags/Linux%E6%97%A5%E5%B8%B8/"/>
+    
+      <category term="Q&amp;A" scheme="https://qwerkael.cn/tags/Q-A/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用python链接redis sentinel</title>
+    <link href="https://qwerkael.cn/2017/12/23/%E4%BD%BF%E7%94%A8python%E9%93%BE%E6%8E%A5redis-sentinel/"/>
+    <id>https://qwerkael.cn/2017/12/23/使用python链接redis-sentinel/</id>
+    <published>2017-12-23T10:13:41.000Z</published>
+    <updated>2017-12-25T09:05:32.000Z</updated>
+    
+    <content type="html"><![CDATA[<figure class="highlight python"><figcaption><span>redis-sentinel-demo</span><a href="https://qwerkael.github.io" target="_blank" rel="noopener">QWERKael</a></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> redis.sentinel <span class="keyword">import</span> Sentinel // 导入sentinel包</span><br><span class="line">sentinel = Sentinel([(<span class="string">'10.60.0.16'</span>,<span class="number">6388</span>)],socket_timeout=<span class="number">0.1</span>) // 获取sentinel的链接</span><br><span class="line">sentinel.discover_master(<span class="string">'sentinel-10.60.0.16-6386'</span>) // 获取master地址</span><br><span class="line">sentinel.discover_slaves(<span class="string">'sentinel-10.60.0.16-6386'</span>) // 获取slave地址</span><br><span class="line">master = sentinel.master_for(<span class="string">'sentinel-10.60.0.16-6386'</span>,socket_timeout=<span class="number">0.1</span>) //获取master的连接</span><br><span class="line">slave = sentinel.slave_for(<span class="string">'sentinel-10.60.0.16-6386'</span>,socket_timeout=<span class="number">0.1</span>) // 获取slave的连接</span><br><span class="line">master.set(<span class="string">'name'</span>,<span class="string">'alex'</span>) // 向master插入一个值</span><br><span class="line">slave.get(<span class="string">'name'</span>) // 从slave获取该值</span><br></pre></td></tr></table></figure><p>进入<code>master</code>实例,使用<code>shutdown</code>命令关闭<code>master</code>实例，再次使用<code>master.get(&#39;name&#39;)</code>命令从<code>master</code>实例取值，python报错<code>Connection refused</code>，可见由于<code>master</code>宕机，导致连接断开。</p><p>过了几秒后再次执行<code>master.get(&#39;name&#39;)</code>命令，命令正常返回值，sentinel已经进行了failover处理，并且<code>master</code>连接重新连接到了新的<code>master</code>实例</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;figure class=&quot;highlight python&quot;&gt;&lt;figcaption&gt;&lt;span&gt;redis-sentinel-demo&lt;/span&gt;&lt;a href=&quot;https://qwerkael.github.io&quot; target=&quot;_blank&quot; rel=&quot;noope
+      
+    
+    </summary>
+    
+    
+      <category term="Python" scheme="https://qwerkael.cn/tags/Python/"/>
+    
+      <category term="Redis" scheme="https://qwerkael.cn/tags/Redis/"/>
+    
+      <category term="Sentinel" scheme="https://qwerkael.cn/tags/Sentinel/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>远程访问ProxySQL管理端口</title>
+    <link href="https://qwerkael.cn/2017/12/23/%E8%BF%9C%E7%A8%8B%E8%AE%BF%E9%97%AEProxySQL%E7%AE%A1%E7%90%86%E7%AB%AF%E5%8F%A3/"/>
+    <id>https://qwerkael.cn/2017/12/23/远程访问ProxySQL管理端口/</id>
+    <published>2017-12-23T08:48:43.000Z</published>
+    <updated>2017-12-25T09:05:25.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>自1.4.1版本以后ProxySQL默认支持远程链接管理端口（<code>admin-mysql_ifaces：“0.0.0.0:6032”</code>），但是不能使用admin用户，admin支持从本地访问。</p><p>可以配置参数<code>admin-admin_credential</code>支持多个用户，例如：</p><p><code>admin-admin_credentials=&quot;admin:admin;admin2:pass2&quot;</code></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;自1.4.1版本以后ProxySQL默认支持远程链接管理端口（&lt;code&gt;admin-mysql_ifaces：“0.0.0.0:6032”&lt;/code&gt;），但是不能使用admin用户，admin支持从本地访问。&lt;/p&gt;
+&lt;p&gt;可以配置参数&lt;code&gt;admin-admin
+      
+    
+    </summary>
+    
+    
+      <category term="MySQL" scheme="https://qwerkael.cn/tags/MySQL/"/>
+    
+      <category term="ProxySQL" scheme="https://qwerkael.cn/tags/ProxySQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>解决PHP连接Proxysql出现乱码的问题</title>
+    <link href="https://qwerkael.cn/2017/11/21/%E8%A7%A3%E5%86%B3PHP%E8%BF%9E%E6%8E%A5Proxysql%E5%87%BA%E7%8E%B0%E4%B9%B1%E7%A0%81%E7%9A%84%E9%97%AE%E9%A2%98/"/>
+    <id>https://qwerkael.cn/2017/11/21/解决PHP连接Proxysql出现乱码的问题/</id>
+    <published>2017-11-21T05:51:07.000Z</published>
+    <updated>2018-01-04T05:55:48.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>PHP使用Laravel框架连接Proxysql有时会出现乱码。</p><p>这种问题的出现一般是在PHP初始化连接的时候并没有设置正确的字符集，而在连接建立后使用<code>Prepare Statement</code>的方式设置字符集导致的。</p><p>Proxysql本身支持设置字符集（如，SET NAMES utf8mb4），但是对于用Prepare Statement设置字符集的方式支持的并不好，所以会导出出现乱码。</p><p> 解决该问题可以参考一下两种方法：</p><ol><li>在<code>vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php</code>中添加 <code>PDO::MYSQL_ATTR_INIT_COMMAND =&gt; &#39;SET NAMES utf8mb4&#39;</code></li><li>在<code>vendor/laravel/framework/src/Illuminate/Database/Connectors/MySqlConnector.php</code>中将</li></ol><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="function"><span class="keyword">function</span> <span class="title">getHostDsn</span><span class="params">(array $config)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  extract($config);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">isset</span>($config[<span class="string">'port'</span>])</span><br><span class="line">    ? <span class="string">"mysql:host=&#123;$host&#125;;port=&#123;$port&#125;;dbname=&#123;$database&#125;"</span></span><br><span class="line">    : <span class="string">"mysql:host=&#123;$host&#125;;dbname=&#123;$database&#125;"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>修改为</p> <figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="function"><span class="keyword">function</span> <span class="title">getHostDsn</span><span class="params">(array $config)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  extract($config);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">isset</span>($config[<span class="string">'port'</span>])</span><br><span class="line">                ? <span class="string">"mysql:host=&#123;$host&#125;;port=&#123;$port&#125;;dbname=&#123;$database&#125;;charset=utf8mb4"</span></span><br><span class="line">                : <span class="string">"mysql:host=&#123;$host&#125;;dbname=&#123;$database&#125;;charset=utf8mb4"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>参考文章：</p><p><a href="https://github.com/sysown/proxysql/issues/780" target="_blank" rel="noopener">https://github.com/sysown/proxysql/issues/780</a></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;PHP使用Laravel框架连接Proxysql有时会出现乱码。&lt;/p&gt;
+&lt;p&gt;这种问题的出现一般是在PHP初始化连接的时候并没有设置正确的字符集，而在连接建立后使用&lt;code&gt;Prepare Statement&lt;/code&gt;的方式设置字符集导致的。&lt;/p&gt;
+&lt;p&gt;Prox
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="proxysql" scheme="https://qwerkael.cn/tags/proxysql/"/>
+    
+      <category term="php" scheme="https://qwerkael.cn/tags/php/"/>
+    
+      <category term="字符集" scheme="https://qwerkael.cn/tags/%E5%AD%97%E7%AC%A6%E9%9B%86/"/>
+    
+      <category term="乱码" scheme="https://qwerkael.cn/tags/%E4%B9%B1%E7%A0%81/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用Proxysql进行权限控制</title>
+    <link href="https://qwerkael.cn/2017/11/16/%E4%BD%BF%E7%94%A8Proxysql%E8%BF%9B%E8%A1%8C%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/"/>
+    <id>https://qwerkael.cn/2017/11/16/使用Proxysql进行权限控制/</id>
+    <published>2017-11-16T04:38:10.000Z</published>
+    <updated>2018-01-04T05:50:18.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>对MySQL进行权限控制可以更好的维护数据库的高可用，也可以更方便的定位问题。</p><p>权限控制可以分为两层，一层是向外对IP做控制，一层是向内对库表做控制。</p><p>当我们使用Proxysql中间件以后，由于数据库的IP入口只有Proxysql服务了，所以我们只能够通过Proxysql来对外部的服务IP做控制。</p><p>而对内的库表权限控制，Proxysql目前还不支持，所以只能通过MySQL原生的权限管理来实现。</p><p>P.S.:在Proxysql管理端口下的mysql_users表中，有 backend 和 frontend 字段。Proxysql的官方文档的解释是，Proxysql将会从 backend 和 frontend 两个层面来支持user的权限控制，即从client到proxysql和从proxysql到mysql两个阶段来分别控制user的权限。到时候我们就可以将不同的frontend账户路由到同一个backend账户，或者反之。但是目前该功能还没实现。</p><h3 id="通过Proxysql对IP访问权限控制："><a href="#通过Proxysql对IP访问权限控制：" class="headerlink" title="通过Proxysql对IP访问权限控制："></a>通过Proxysql对IP访问权限控制：</h3><p>Proxysql对IP的控制需要在query rules做控制，通过client_addr字段来控制访问的ip，但是不能进行模糊匹配或者正则匹配。所以要做IP控制只能一个IP一个IP的添加。</p><h3 id="通过Proxysql和iptables对IP访问权限控制："><a href="#通过Proxysql和iptables对IP访问权限控制：" class="headerlink" title="通过Proxysql和iptables对IP访问权限控制："></a>通过Proxysql和iptables对IP访问权限控制：</h3><p>由于proxysql不能进行批量匹配ip地址，所以我们可以iptables进行ip地址匹配，但是这样我们就无法对服务地址和服务使用的mysql账户关联起来进行限制了。</p><p>为此，我们可以使用mysql-interfaces参数让proxysql监听多个端口，为每一个服务分配一个端口，在query rules里通过proxy_addr和proxy_port参数来根据proxysql的端口进行路由规则的配置。</p><h3 id="通过MySQL对库表进行权限管理："><a href="#通过MySQL对库表进行权限管理：" class="headerlink" title="通过MySQL对库表进行权限管理："></a>通过MySQL对库表进行权限管理：</h3><p>MySQL的授权语句可以对库级别和表级别进行不同权限的细化的权限管理。</p><p>需要注意的是服务器使用的用户需要在Proxysql和MySQL同时进行注册才能够正常的使用。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;对MySQL进行权限控制可以更好的维护数据库的高可用，也可以更方便的定位问题。&lt;/p&gt;
+&lt;p&gt;权限控制可以分为两层，一层是向外对IP做控制，一层是向内对库表做控制。&lt;/p&gt;
+&lt;p&gt;当我们使用Proxysql中间件以后，由于数据库的IP入口只有Proxysql服务了，所以我们
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="proxysql" scheme="https://qwerkael.cn/tags/proxysql/"/>
+    
+      <category term="权限控制" scheme="https://qwerkael.cn/tags/%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用ProxySQL做数据库审计</title>
+    <link href="https://qwerkael.cn/2017/08/24/%E4%BD%BF%E7%94%A8ProxySQL%E5%81%9A%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%A1%E8%AE%A1/"/>
+    <id>https://qwerkael.cn/2017/08/24/使用ProxySQL做数据库审计/</id>
+    <published>2017-08-24T03:12:07.000Z</published>
+    <updated>2018-01-04T04:39:46.000Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="为什么要使用中间件做审计"><a href="#为什么要使用中间件做审计" class="headerlink" title="为什么要使用中间件做审计"></a>为什么要使用中间件做审计</h3><p>数据库审计是数据库运维中的一项重要手段，<code>mysql</code>的主流发行版本都提供有各种数据库审计的插件。</p><p><code>Oracle</code>公司对<code>MySQL企业版</code>提供了官方的审计插件。</p><p><code>Mcafee</code>公司也对<code>MySQL</code>提供了相应的<a href="https://github.com/mcafee/mysql-audit" target="_blank" rel="noopener">审计插件</a>。</p><p><a href="https://www.percona.com/doc/percona-server/LATEST/management/audit_log_plugin.html" target="_blank" rel="noopener"><code>Percona</code></a>和<a href="https://mariadb.com/kb/en/library/mariadb-audit-plugin-log-settings/" target="_blank" rel="noopener"><code>MariaDB</code></a>也分别有官方提供的审计插件。</p><p>但是<code>审计插件</code>的使用会有一定的性能开销，并且也存着相应的风险。</p><p>但是如果我们使用了中间件后，在中间件中对<code>MySQL</code>做审计，则完全没有了这样的顾虑。</p><h3 id="使用proxysql做审计"><a href="#使用proxysql做审计" class="headerlink" title="使用proxysql做审计"></a>使用proxysql做审计</h3><p>使用<code>proxysql</code>做审计的思路很简单，在<code>proxysql</code>的转发规则中我们可以设置对指定规则记录日志。那么我们就可以对一些敏感操作进行审计。</p><p>首先，我们来创建一个存放日志的目录：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p /data/ProxySQL/log</span><br></pre></td></tr></table></figure><p>然后在<code>ProxySQL</code>中配置日志的地址</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 首先进入管理端口：</span><br><span class="line"><span class="meta">$</span> mysql -uadmin -padmin -h127.0.0.1 -P6032</span><br><span class="line"><span class="meta">#</span> 然后设置变量，并加载和持久化：</span><br><span class="line">set mysql-eventslog_filename = ‘/data/ProxySQL/log/sql.log’</span><br><span class="line">LOAD MYSQL VARIABLES TO RUNTIME;</span><br><span class="line">SAVE MYSQL VARIABLES TO DISK;</span><br></pre></td></tr></table></figure><p>在mysql_query_rules表中设置路由规则</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 记录所有delete操作</span><br><span class="line"><span class="keyword">Insert</span> <span class="keyword">into</span> mysql_query_rules(rule_id,active,match_digest,<span class="keyword">log</span>,<span class="keyword">apply</span>) <span class="keyword">values</span>(<span class="number">1000</span>,<span class="number">1</span>,’^<span class="keyword">delete</span>’,<span class="number">1</span>,<span class="number">1</span>)</span><br></pre></td></tr></table></figure><p>这样，所有通过proxysql的delete操作都会记入日志</p><p>但是proxysql的日志时二进制格式的，我们需要通过proxysql提供的一个工具eventslog_reader_sample进行解析</p><p>但是我们安装的rpm包里并没有这个工具，我们需要单独下载并编译它</p><p>在<a href="https://github.com/sysown/proxysql/tree/v1.4.2/tools" target="_blank" rel="noopener">https://github.com/sysown/proxysql/tree/v1.4.2/tools</a>我们可以看到<code>eventslog_reader_sample.cpp</code>和<code>Makefile</code>文件</p><p>我们需要下载并make一下，就可以生成可用的工具了。</p><h3 id="tips"><a href="#tips" class="headerlink" title="tips"></a>tips</h3><p>我在编译<code>eventslog_reader_sample</code>的时候遇到了一些问题，在编译好以后使用<code>eventslog_reader_sample</code>解析<code>二进制log</code>时会报错</p><p><img src="http://167.88.180.8/wp-content/uploads/2017/08/082417_1127_ProxySQL1.png" alt="img"></p><p>这可能和<code>proxysql</code>的版本有关系，在<code>eventslog_reader_sample</code>执行时会判断<code>log文件</code>的第一个字节是否为<code>0x00</code>，而我输出的<code>log</code>都是以<code>0x81</code>开头的。所以总会报错。</p><p>解决的方法是修改<code>cpp文件</code>，我直接将<code>99-105行</code>的判断</p><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span> (et) &#123;</span><br><span class="line">  <span class="keyword">case</span> PROXYSQL_QUERY:</span><br><span class="line">    read_query(f);</span><br><span class="line">    <span class="keyword">break</span>;</span><br><span class="line">  <span class="keyword">default</span>:</span><br><span class="line"><span class="keyword">break</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>给去掉了，直接改成了</p><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">read_query(f);</span><br></pre></td></tr></table></figure><p>再进行编译，然后就可以用了。</p><p>以上。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;为什么要使用中间件做审计&quot;&gt;&lt;a href=&quot;#为什么要使用中间件做审计&quot; class=&quot;headerlink&quot; title=&quot;为什么要使用中间件做审计&quot;&gt;&lt;/a&gt;为什么要使用中间件做审计&lt;/h3&gt;&lt;p&gt;数据库审计是数据库运维中的一项重要手段，&lt;code&gt;mysq
+      
+    
+    </summary>
+    
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+      <category term="proxysql" scheme="https://qwerkael.cn/tags/proxysql/"/>
+    
+      <category term="审计" scheme="https://qwerkael.cn/tags/%E5%AE%A1%E8%AE%A1/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>mycat的表级DML权限设置无法生效问题的解决</title>
+    <link href="https://qwerkael.cn/2017/07/15/mycat%E7%9A%84%E8%A1%A8%E7%BA%A7DML%E6%9D%83%E9%99%90%E8%AE%BE%E7%BD%AE%E6%97%A0%E6%B3%95%E7%94%9F%E6%95%88%E9%97%AE%E9%A2%98%E7%9A%84%E8%A7%A3%E5%86%B3/"/>
+    <id>https://qwerkael.cn/2017/07/15/mycat的表级DML权限设置无法生效问题的解决/</id>
+    <published>2017-07-15T05:56:54.000Z</published>
+    <updated>2018-01-04T06:03:42.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>在<code>mycat</code>中，可以通过对<code>server.xml</code>文件里的<code>user</code>段下的<code>privileges</code>段进行配置，而从进行更细化的权限控制。</p><p>但是在实际操作中，配置了<code>property</code>段后，<code>mycat</code>却会报出配置文件错误的信息。</p><p>我们可以在错误日志中看到具体的信息</p><p><img src="/images/mycat_dml_err.png" alt="img"></p><p>错误显示<code>元素类型为 &quot;user&quot; 的内容必须匹配 &quot;(property)+&quot;。</code></p><p>显然是我们添加了<code>privileges</code>标签导致的错误，而<code>mycat</code>却要求<code>user</code>下必须匹配<code>property</code>标签，一定是在校验xml的时候出来问题。</p><p>我们查看<code>github</code>中<code>mycat</code>的源码，在<code>src/main/resources</code>目录下的<code>server.dtd</code>文件中我们可以看到对<code>server.xml</code>的校验是<code>&lt;!ELEMENT user (property+,privileges*)&gt;</code></p><p>这一行说明在user段下是允许使用<code>privileges</code>标签的，但是必须在<code>property</code>之后，显然我们的配置是符合规范的，可是我们运行<code>mycat</code>是却会报错。</p><p>我们再来查看我们部署的<code>mycat</code>中<code>server.dtd</code>文件是怎么写的，</p><p>在<code>mycat</code>目录下的<code>lib/Mycat-server-1.6-RELEASE.jar</code>包中我们可以看到<code>server.dtd</code>文件显示的是<code>&lt;!ELEMENT user (property+)&gt;</code></p><p>这和<code>github</code>中的不一样，这个校验只允许<code>property</code>标签。</p><p>问题的原因就是，官方最新打包的程序中的配置和<code>github</code>中的源码不一致，并且不支持<code>privileges</code>标签。</p><p>那么解决的方法就很简单了，将<code>github</code>中的<code>server.dtd</code>文件替换掉<code>jar包</code>中的相应文件，然后重新部署。</p><p>至此，问题解决。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;在&lt;code&gt;mycat&lt;/code&gt;中，可以通过对&lt;code&gt;server.xml&lt;/code&gt;文件里的&lt;code&gt;user&lt;/code&gt;段下的&lt;code&gt;privileges&lt;/code&gt;段进行配置，而从进行更细化的权限控制。&lt;/p&gt;
+&lt;p&gt;但是在实际操作中，配置了&lt;c
+      
+    
+    </summary>
+    
+    
+      <category term="mycat" scheme="https://qwerkael.cn/tags/mycat/"/>
+    
+      <category term="mysql" scheme="https://qwerkael.cn/tags/mysql/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用iptables对redis做访问限制</title>
+    <link href="https://qwerkael.cn/2017/07/13/%E4%BD%BF%E7%94%A8iptables%E5%AF%B9redis%E5%81%9A%E8%AE%BF%E9%97%AE%E9%99%90%E5%88%B6/"/>
+    <id>https://qwerkael.cn/2017/07/13/使用iptables对redis做访问限制/</id>
+    <published>2017-07-13T06:06:47.000Z</published>
+    <updated>2018-01-04T06:12:18.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>在redis的配置文件中我们可以使用bind参数对访问redis的来源ip做限制，但是bind参数只支持对每个ip使用都好分隔的方式做限制，而不能直接限制ip段。</p><p>为了更好的控制redis的访问来源，我们使用iptables对redis做访问限制。</p><p>由于我们在一台服务器上启动了多个redis实例，这里使用multiport模块同时对多个端口配置规则，只允许192.168和10.10网段的服务器访问，拒绝其他的服务器访问，并保存我们的配置</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">iptables -m multiport -I INPUT -s 192.168.0.0/16 -p tcp --dport 6369,6379,6389,6399 -j ACCEPT</span><br><span class="line">iptables -m multiport -I INPUT -s 10.10.0.0/16 -p tcp --dport 6369,6379,6389,6399 -j ACCEPT</span><br><span class="line">iptables -m multiport -A INPUT -p tcp --dport 6369,6379,6389,6399 -j REJECT</span><br><span class="line">service iptables save</span><br></pre></td></tr></table></figure><p>使用connlimit模块对每个redis实例做连接数限制，每个端口只支持1000个连接，并保存我们的配置</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6379 -j REJECT</span><br><span class="line">iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6380 -j REJECT</span><br><span class="line">iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6381 -j REJECT</span><br><span class="line">iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6382 -j REJECT</span><br><span class="line">service iptables save</span><br></pre></td></tr></table></figure>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;在redis的配置文件中我们可以使用bind参数对访问redis的来源ip做限制，但是bind参数只支持对每个ip使用都好分隔的方式做限制，而不能直接限制ip段。&lt;/p&gt;
+&lt;p&gt;为了更好的控制redis的访问来源，我们使用iptables对redis做访问限制。&lt;/p&gt;
+&lt;
+      
+    
+    </summary>
+    
+    
+      <category term="redis" scheme="https://qwerkael.cn/tags/redis/"/>
+    
+      <category term="iptables" scheme="https://qwerkael.cn/tags/iptables/"/>
+    
+  </entry>
+  
+</feed>
