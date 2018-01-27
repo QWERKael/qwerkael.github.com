@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://qwerkael.cn/2018/01/23/python%E4%B8%AD%E7%9A%84%E8%BF%AD%E4%BB%A3/</loc>
+    
+    <lastmod>2018-01-27T12:26:23.543Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://qwerkael.cn/2018/01/03/%E5%AE%89%E8%A3%85%E5%90%88%E9%9B%86/</loc>
+    
+    <lastmod>2018-01-15T10:01:44.515Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://qwerkael.cn/categories/index.html</loc>
     
     <lastmod>2018-01-12T12:47:42.000Z</lastmod>
@@ -68,13 +82,6 @@
     <loc>https://qwerkael.cn/2017/08/24/%E4%BD%BF%E7%94%A8ProxySQL%E5%81%9A%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%A1%E8%AE%A1/</loc>
     
     <lastmod>2018-01-04T04:39:46.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://qwerkael.cn/2018/01/03/%E5%AE%89%E8%A3%85%E5%90%88%E9%9B%86/</loc>
-    
-    <lastmod>2018-01-03T03:05:15.000Z</lastmod>
     
   </url>
   
