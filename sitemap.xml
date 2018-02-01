@@ -2,9 +2,30 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://qwerkael.cn/2017/08/23/ProxySQL%E5%AE%89%E8%A3%85%E4%B8%8E%E9%85%8D%E7%BD%AE/</loc>
+    
+    <lastmod>2018-01-31T15:34:00.399Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://qwerkael.cn/2017/12/23/%E4%BD%BF%E7%94%A8python%E9%93%BE%E6%8E%A5redis-sentinel/</loc>
+    
+    <lastmod>2018-01-29T08:59:54.462Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://qwerkael.cn/2017/12/23/%E8%BF%9C%E7%A8%8B%E8%AE%BF%E9%97%AEProxySQL%E7%AE%A1%E7%90%86%E7%AB%AF%E5%8F%A3/</loc>
+    
+    <lastmod>2018-01-29T08:59:51.722Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://qwerkael.cn/2017/11/15/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%89%88%E6%9C%AC%E6%8E%A7%E5%88%B6%E5%B7%A5%E5%85%B7%E2%80%94%E2%80%94flyway%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/</loc>
     
-    <lastmod>2018-01-29T08:57:52.261Z</lastmod>
+    <lastmod>2018-01-29T08:59:05.688Z</lastmod>
     
   </url>
   
@@ -110,20 +131,6 @@
     <loc>https://qwerkael.cn/2017/12/25/OpenTSDB-%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E9%83%A8%E7%BD%B2/</loc>
     
     <lastmod>2017-12-25T10:36:10.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://qwerkael.cn/2017/12/23/%E4%BD%BF%E7%94%A8python%E9%93%BE%E6%8E%A5redis-sentinel/</loc>
-    
-    <lastmod>2017-12-25T09:05:32.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://qwerkael.cn/2017/12/23/%E8%BF%9C%E7%A8%8B%E8%AE%BF%E9%97%AEProxySQL%E7%AE%A1%E7%90%86%E7%AB%AF%E5%8F%A3/</loc>
-    
-    <lastmod>2017-12-25T09:05:25.000Z</lastmod>
     
   </url>
   

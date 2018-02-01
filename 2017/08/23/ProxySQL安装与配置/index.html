@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="Chinese"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="QWERKael's Blog"><title>ProxySQL安装与配置 | QWERKael's Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/7.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">ProxySQL安装与配置</h1><a id="logo" href="/.">QWERKael's Blog</a><p class="description">Was macht mich nicht umbringt, macht mich stärker!</p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> Start</i></a><a href="/archives/"><i class="fa fa-archive"> Archiv</i></a><a href="/about/"><i class="fa fa-user"> Über</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">ProxySQL安装与配置</h1><div class="post-meta">Aug 23, 2017</div><div class="post-content"><p>####安装</p>
+<ul>
+<li>从github上（<a href="https://github.com/sysown/proxysql/releases）下载相应的rpm包" target="_blank" rel="noopener">https://github.com/sysown/proxysql/releases）下载相应的rpm包</a></li>
+<li>使用 yum localinstall proxysql-1.4.1-1-centos7.x86_64.rpm 安装</li>
+</ul>
+<p>####启动</p>
+<ul>
+<li>Service proxysql start</li>
+</ul>
+<p>####配置文件</p>
+<ul>
+<li>文本配置文件<ul>
+<li>ProxyQSL使用一个配置文件的（/etc/proxysql.cnf），但是这个配置文件只在第一次启动时使用，一般不需要修改</li>
+</ul>
+</li>
+<li>SQLite配置文件<ul>
+<li>ProxySQL在第一次启动后就会使用SQLite文件（/var/lib/proxysql/proxysql.db）来加载和持久化配置项，并且这种配置方式支持在线修改</li>
+</ul>
+</li>
+</ul>
+<p>####登录</p>
+<ul>
+<li>ProxySQL默认的管理端口是6032</li>
+<li>ProxySQL默认的服务端口是6033</li>
+<li>ProxySQL默认的用户名和密码都是admin</li>
+</ul>
+<p>####库结构</p>
+<ul>
+<li><p>登录到管理端口，使用show databases;</p>
+<p><img src="/images/ProxySQL安装与配置/082317_0906_ProxySQL1.png" alt="img"></p>
+<p>在管理端口中有4个库，分别是：</p>
+<p>Admin：默认数据库，存放服务器、用户、路由等的配置信息。以”runtime_“开头的表是当前运行中的配置，不能直接修改。通过修改没有前缀的表，使用”LOAD“加载配置，使用”SAVE“持久化配置。</p>
+<p>Disk：存储配置的SQLite数据库</p>
+<p>Stats：各种命令的统计信息</p>
+<p>Monitor：对于后端数据库的监控信息                    </p>
+</li>
+</ul>
+<p>####配置表</p>
+<ul>
+<li><p>各种配置所使用到的表都在main库中</p>
+<p>mysql&gt; show tables from main;</p>
+<p>+——————————————–+</p>
+<p>| tables                                     |</p>
+<p>+——————————————–+</p>
+<p>| global_variables                           |全局变量，，具体可见<a href="https://github.com/sysown/proxysql/wiki/Global-variables" target="_blank" rel="noopener">https://github.com/sysown/proxysql/wiki/Global-variables</a></p>
+<p>| mysql_collations                           |字符集相关</p>
+<p>| mysql_group_replication_hostgroups         |MySQL Group Replication信息</p>
+<p>| mysql_query_rules                          |路由规则信息</p>
+<p>| mysql_replication_hostgroups               |定义hostgroup的主从信息</p>
+<p>| mysql_servers                              |后端MySQL节点</p>
+<p>| mysql_users                                |用户配置</p>
+<p>| proxysql_servers                           |</p>
+<p>| runtime_global_variables                   |</p>
+<p>| runtime_mysql_group_replication_hostgroups |</p>
+<p>| runtime_mysql_query_rules                  |</p>
+<p>| runtime_mysql_replication_hostgroups       |</p>
+<p>| runtime_mysql_servers                      |</p>
+<p>| runtime_mysql_users                        |</p>
+<p>| runtime_proxysql_servers                   |</p>
+<p>| runtime_scheduler                          |</p>
+<p>| scheduler                                  |定时器</p>
+<p>+——————————————–+</p>
+<p>17 rows in set (0.00 sec)</p>
+</li>
+<li><p>数据库节点设置（mysql_servers）</p>
+<ul>
+<li>这张表主要配置hostgroup的相关信息。路由时会根据设置的规则将相关SQL路由到指定的hostgroup。而在同一hostgroup中又根据权重分发SQL语句。</li>
+</ul>
+</li>
+<li><p>用户设置（mysql_users）</p>
+<ul>
+<li>配置客户端连接proxysql（frontend）和proxysql连接数据库（backend）的用户。目前这两个值都默认为1。以后可能会分开。</li>
+</ul>
+</li>
+<li><p>主从关系设置（mysql_replication_hostgroups）</p>
+<ul>
+<li>根据read_only值来判断主从。可以不配置。</li>
+</ul>
+</li>
+<li><p>路由规则设置（mysql_query_rules）</p>
+<ul>
+<li><p>Proxysql会根据主键rule_id的顺序加载路由规则。</p>
+</li>
+<li><p>Username/client_addr/schemaname：只有用户、地址和schema匹配时规则才会生效。</p>
+</li>
+<li><p>Proxysql会先检查flagIN=0的规则</p>
+</li>
+<li><p>如果规则匹配，且flagIN=flagOUT或者flagOUT=NULL或者apply=1，则应用这条规则</p>
+</li>
+<li><p>否则，根据flagOUT的值，去匹配下一条flagIN等于该值的规则</p>
+</li>
+<li><p>Digest/match_digest/match_pattern：这三个值都是用来匹配查询的。</p>
+<p>Digest匹配的值类似于stats_mysql_query_digest表中的digest列</p>
+<p><img src="/images/ProxySQL安装与配置/082317_0906_ProxySQL2.png" alt="img"></p>
+<p>Match_digest匹配的值类似于stats_mysql_query_digest中的digest_text列</p>
+<p><img src="/images/ProxySQL安装与配置/082317_0906_ProxySQL3.png" alt="img"></p>
+<p>Match_pattern匹配的是未经修改过的SQL语句                            </p>
+</li>
+<li><p>Negate_match_pattern：对match_digest/match_pattern的匹配值取反</p>
+</li>
+<li><p>重写SQL：重写SQL最好使用match_pattern作为匹配项，使用replace_pattern作为重写后的SQL，二者都遵循正则表达式</p>
+</li>
+</ul>
+</li>
+</ul>
+</div><div class="tags"><a href="/tags/proxysql/">proxysql</a></div><div class="post-nav"><a class="pre" href="/2017/08/24/使用ProxySQL做数据库审计/">使用ProxySQL做数据库审计</a><a class="next" href="/2017/07/15/mycat的表级DML权限设置无法生效问题的解决/">mycat的表级DML权限设置无法生效问题的解决</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://qwerkael.cn"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> Kategorien</i></div></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> Tags</i></div><div class="tagcloud"><a href="/tags/权限控制/" style="font-size: 15px;">权限控制</a> <a href="/tags/mycat/" style="font-size: 15px;">mycat</a> <a href="/tags/opentsdb/" style="font-size: 15px;">opentsdb</a> <a href="/tags/安装/" style="font-size: 15px;">安装</a> <a href="/tags/时序数据库/" style="font-size: 15px;">时序数据库</a> <a href="/tags/python/" style="font-size: 15px;">python</a> <a href="/tags/proxysql/" style="font-size: 15px;">proxysql</a> <a href="/tags/Q-A/" style="font-size: 15px;">Q&A</a> <a href="/tags/tilda/" style="font-size: 15px;">tilda</a> <a href="/tags/terminal/" style="font-size: 15px;">terminal</a> <a href="/tags/Linux日常/" style="font-size: 15px;">Linux日常</a> <a href="/tags/审计/" style="font-size: 15px;">审计</a> <a href="/tags/Archlinux/" style="font-size: 15px;">Archlinux</a> <a href="/tags/pacman/" style="font-size: 15px;">pacman</a> <a href="/tags/yaourt/" style="font-size: 15px;">yaourt</a> <a href="/tags/cli/" style="font-size: 15px;">cli</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/iptables/" style="font-size: 15px;">iptables</a> <a href="/tags/sentinel/" style="font-size: 15px;">sentinel</a> <a href="/tags/centos/" style="font-size: 15px;">centos</a> <a href="/tags/yum/" style="font-size: 15px;">yum</a> <a href="/tags/php/" style="font-size: 15px;">php</a> <a href="/tags/字符集/" style="font-size: 15px;">字符集</a> <a href="/tags/乱码/" style="font-size: 15px;">乱码</a> <a href="/tags/proxySQL/" style="font-size: 15px;">proxySQL</a> <a href="/tags/tcp/" style="font-size: 15px;">tcp</a> <a href="/tags/TIME-WAIT/" style="font-size: 15px;">TIME_WAIT</a> <a href="/tags/codis/" style="font-size: 15px;">codis</a> <a href="/tags/cachecloud/" style="font-size: 15px;">cachecloud</a> <a href="/tags/集群/" style="font-size: 15px;">集群</a> <a href="/tags/安装部署/" style="font-size: 15px;">安装部署</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> Letzte</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2018/01/23/python中的迭代/">python中的迭代</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/10/解决ProxySQL连接MySQL产生大量TIME_WAIT连接的问题/">解决ProxySQL连接MySQL产生大量TIME_WAIT连接的问题</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/08/yaourt-pacman加速3连/">yaourt/pacman加速3连</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/03/安装合集/">安装合集</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/28/使用Navicat链接proxysql无法进行用户管理/">使用Navicat链接proxysql无法进行用户管理</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/27/使用cachecloud和codis搭建redis环境/">使用cachecloud和codis搭建redis环境</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/25/OpenTSDB-的安装与部署/">OpenTSDB 的安装与部署</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/25/tilda-无法设置透明模式/">tilda 无法设置透明模式</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/23/使用python链接redis-sentinel/">使用python链接redis sentinel</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/23/远程访问ProxySQL管理端口/">远程访问ProxySQL管理端口</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> Blogroll</i></div><ul></ul><a href="https://www.percona.com" title="Percona官网" target="_blank">Percona官网</a><ul></ul><a href="http://mysql.taobao.org/monthly/" title="淘宝内核月报" target="_blank">淘宝内核月报</a><ul></ul><a href="https://yandex.com/blog/clickhouse" title="ClickHouse Blog" target="_blank">ClickHouse Blog</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">QWERKael's Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.2.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.2.5/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
