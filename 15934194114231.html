@@ -1,0 +1,579 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  为InnoDB存储引擎配置内存分配器 - 阿勒西的小屋
+  
+  </title>
+  
+  
+  <link href="atom.xml" rel="alternate" title="阿勒西的小屋" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+ 
+<script type="text/javascript">
+  function before_search(){
+    var searchVal = 'site: ' + document.getElementById('search_input').value;
+    document.getElementById('search_q').value = searchVal;
+    return true;
+  }
+</script>
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+
+  <section class="top-bar-section">
+  <div class="row">
+      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
+        <ul id="main-menu" class="left">
+        
+        <li id=""><a target="self" href="index.html">Home</a></li>
+        
+        <li id=""><a target="_self" href="archives.html">Archives</a></li>
+        
+        </ul>
+
+        <ul class="right" id="search-wrap">
+          <li>
+<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
+    <input type="hidden" id="search_q" name="q" value="" />
+    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
+</form>
+</li>
+          </ul>
+      </div></div>
+  </div>
+  </section>
+
+</nav>
+
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; 阿勒西的小屋</span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+        
+        <li><a target="self" href="index.html">Home</a></li>
+        
+        <li><a target="_self" href="archives.html">Archives</a></li>
+        
+
+    <li><label>Categories</label></li>
+
+        
+            <li><a href="Tech.html">Tech</a></li>
+        
+            <li><a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">读书笔记</a></li>
+         
+
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+
+        <section id="main-content" role="main" class="scroll-container">
+        
+       
+
+ <script type="text/javascript">
+  $(function(){
+    $('#menu_item_index').addClass('is_active');
+  });
+</script>
+<div class="row">
+  <div class="large-8 medium-8 columns">
+      <div class="markdown-body article-wrap">
+       <div class="article">
+          
+          <h1>为InnoDB存储引擎配置内存分配器</h1>
+     
+        <div class="read-more clearfix">
+          <span class="date">2018/03/22</span>
+
+          <span>posted in&nbsp;</span> 
+          
+              <span class="posted-in"><a href='Tech.html'>Tech</a></span>
+           
+         
+          <span class="comments">
+            
+
+            
+          </span>
+
+        </div>
+      </div><!-- article -->
+
+      <div class="article-content">
+      <blockquote>
+<p>这是一篇MySQL官方文档的翻译，是我在查阅InnoDB额外内存池相关资料时找到的</p>
+</blockquote>
+
+<p><a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-performance-use_sys_malloc.html">原文链接</a></p>
+
+<h2 id="toc_0">14.6.4 Configuring the Memory Allocator for InnoDB</h2>
+
+<blockquote>
+<p>14.6.4 为InnoDB存储引擎配置内存分配器</p>
+</blockquote>
+
+<p>​When InnoDB was developed, the memory allocators supplied with operating systems and run-time libraries were often lacking in performance and scalability. At that time, there were no memory allocator libraries tuned for multi-core CPUs. Therefore, InnoDB implemented its own memory allocator in the mem subsystem. This allocator is guarded by a single mutex, which may become a bottleneck. InnoDB also implements a wrapper interface around the system allocator (malloc and free) that is likewise guarded by a single mutex.</p>
+
+<blockquote>
+<p>在InnoDB存储引擎被开发时，操作系统和运行时库所提供的内存分配器在性能和扩展性上都表现欠佳。当时并没有针对多核CPU调优的内存分配器库。因此，InnoDB在mem子系统中自己实现了一个内存分配器。这个分配器被一个单一的互斥锁保护着，而这则可能会导致瓶颈。InnoDB也实现了一个基于系统分配器（malloc和free）的包装接口，同样的，也被单一互斥锁保护着。</p>
+</blockquote>
+
+<p>Today, as multi-core systems have become more widely available, and as operating systems have matured, significant improvements have been made in the memory allocators provided with operating systems. These new memory allocators perform better and are more scalable than they were in the past. Most workloads, especially those where memory is frequently allocated and released (such as multi-table joins), benefit from using a more highly tuned memory allocator as opposed to the internal, InnoDB-specific memory allocator.</p>
+
+<blockquote>
+<p>现在，随着多核系统的广泛应用和操作系统的不断成熟，操作系统所提供的内存分配器也取得了重大的进步。新的内存分配器在性能和扩展性方面都比之前的要更加优异。在大多数的工作负载（尤其是需要频繁的分配和释放内存的）场景下，使用经过高度调优的内存分配器要比使用InnoDB特定的内置的内存分配器效果更好。</p>
+</blockquote>
+
+<p>​You can control whether InnoDB uses its own memory allocator or an allocator of the operating system, by setting the value of the system configuration parameterinnodb_use_sys_malloc in the MySQL option file (my.cnf or my.ini). If set to ON or 1 (the default), InnoDB uses the malloc and freefunctions of the underlying system rather than manage memory pools itself. This parameter is not dynamic, and takes effect only when the system is started. To continue to use the InnoDB memory allocator, set innodb_use_sys_malloc to 0.</p>
+
+<blockquote>
+<p>你可以通过配置MySQL配置文件（my.cnf or my.ini）中的innodb_use_sys_malloc参数来控制InnoDB是使用自带的内存分配器还是使用操作系统提供的内存分配器。如果参数被设置为ON或者1（这也是默认值），InnoDB会使用当前系统下的malloc和free函数，而不是维护一个自己的内存池。这个参数并非是动态的，它会随着系统的启动而生效。将innodb_use_sys_malloc设置为0，则会继续使用InnoDB的内存分配器。</p>
+</blockquote>
+
+<p>​When the InnoDB memory allocator is disabled, InnoDB ignores the value of the parameter innodb_additional_mem_pool_size. The InnoDB memory allocator uses an additional memory pool for satisfying allocation requests without having to fall back to the system memory allocator. When the InnoDB memory allocator is disabled, all such allocation requests are fulfilled by the system memory allocator.</p>
+
+<blockquote>
+<p>当InnoDB内存分配器被关闭是，InnoDB会忽略innodb_additional_mem_pool_size参数的值。InnoDB内存分配器使用一个额外的内存池来满足分配请求，而不必依赖于系统的内存分配器。而当InnoDB内存分配器不可用时，所有的分配请求都将由系统的内存分配器来满足。</p>
+</blockquote>
+
+<p>​On Unix-like systems that use dynamic linking, replacing the memory allocator may be as easy as making the environment variable LD_PRELOAD or LD_LIBRARY_PATH point to the dynamic library that implements the allocator. On other systems, some relinking may be necessary. Please refer to the documentation of the memory allocator library of your choice.</p>
+
+<blockquote>
+<p>在使用动态链接的类Unix系统上，替换内存分配器很简单，只要将环境变量LD_PRELOAD or LD_LIBRARY_PATH指向实现了分配器的动态库就行。在其他系统中则需要重新连接。请参考你所选择的内存分配器库的相关文档。</p>
+</blockquote>
+
+<p>​Since InnoDB cannot track all memory use when the system memory allocator is used (innodb_use_sys_malloc is ON), the section “BUFFER POOL AND MEMORY” in the output of the SHOW ENGINE INNODB STATUS command only includes the buffer pool statistics in the “Total memory allocated”. Any memory allocated using the mem subsystem or using ut_malloc is excluded.</p>
+
+<blockquote>
+<p>当使用系统内存分配器（innodb_use_sys_malloc设为ON）时，InnoDB无法跟踪内存的使用，因此在使用SHOW ENGINE INNODB STATUS命令查看输出中的BUFFER POOL AND MEMORY信息时“Total memory allocated”仅包含了缓冲池（buffer pool）的统计。而没有使用mem子系统或者ut_malloc的内存分配。</p>
+</blockquote>
+
+<p>Note</p>
+
+<p>​innodb_use_sys_malloc and innodb_additional_mem_pool_size were deprecated in MySQL 5.6 and removed in MySQL 5.7.</p>
+
+<blockquote>
+<p>innodb_use_sys_malloc和innodb_additional_mem_pool_size在MySQL 5.6中被弃用，在MySQL 5.7中被移除。</p>
+</blockquote>
+
+
+    
+
+      </div>
+
+      <div class="row">
+        <div class="large-6 columns">
+        <p class="text-left" style="padding:15px 0px;">
+      
+          <a href="15934177615172.html" 
+          title="Previous Post: < MySQL Innternals Manual >阅读笔记">&laquo; < MySQL Innternals Manual >阅读笔记</a>
+      
+        </p>
+        </div>
+        <div class="large-6 columns">
+      <p class="text-right" style="padding:15px 0px;">
+      
+          <a  href="15934197733993.html" 
+          title="Next Post: 同步MySQL增量数据到ClickHouse">同步MySQL增量数据到ClickHouse &raquo;</a>
+      
+      </p>
+        </div>
+      </div>
+      <div class="comments-wrap">
+        <div class="share-comments">
+          
+
+          
+
+          
+        </div>
+      </div>
+    </div><!-- article-wrap -->
+  </div><!-- large 8 -->
+
+
+
+
+ <div class="large-4 medium-4 columns">
+  <div class="hide-for-small">
+    <div id="sidebar" class="sidebar">
+          <div id="site-info" class="site-info">
+            
+                <h1>阿勒西的小屋</h1>
+                <div class="site-des"></div>
+                <div class="social">
+
+
+
+
+
+
+
+
+
+
+
+  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
+                
+              	 </div>
+          	</div>
+
+             
+
+              <div id="site-categories" class="side-item ">
+                <div class="side-header">
+                  <h2>Categories</h2>
+                </div>
+                <div class="side-content">
+
+      	<p class="cat-list">
+        
+            <a href="Tech.html"><strong>Tech</strong></a>
+        
+            <a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html"><strong>读书笔记</strong></a>
+         
+        </p>
+
+
+                </div>
+              </div>
+
+              <div id="site-categories" class="side-item">
+                <div class="side-header">
+                  <h2>Recent Posts</h2>
+                </div>
+                <div class="side-content">
+                <ul class="posts-list">
+	      
+		      
+			      <li class="post">
+			        <a href="15934181114037.html"><超越感觉：批判性思考指南>读书笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934177615172.html">< MySQL Innternals Manual >阅读笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934194114231.html">为InnoDB存储引擎配置内存分配器</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934197733993.html">同步MySQL增量数据到ClickHouse</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934208816740.html">python中的迭代</a>
+			      </li>
+		     
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		   
+		  		</ul>
+                </div>
+              </div>
+        </div><!-- sidebar -->
+      </div><!-- hide for small -->
+</div><!-- large 4 -->
+
+</div><!-- row -->
+
+ <div class="page-bottom clearfix">
+  <div class="row">
+   <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+figure{margin: 0;padding: 0;}
+figcaption{text-align:center;}
+
+/* PrismJS 1.14.0
+ http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
+/**
+ * prism.js default theme for JavaScript, CSS and HTML
+ * Based on dabblet (http://dabblet.com)
+ * @author Lea Verou
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+    color: black;
+    background: none;
+    text-shadow: 0 1px white;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+    text-shadow: none;
+    background:#b3d4fc;
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+    text-shadow: none;
+    background: #b3d4fc;
+}
+
+@media print {
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none;
+    }
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background: #F7F7F7;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+    padding: .1em;
+    border-radius: .3em;
+    white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: slategray;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.namespace {
+    opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+    background: hsla(0, 0%, 100%, .5);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #DD4A68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+.token.italic {
+    font-style: italic;
+}
+
+.token.entity {
+    cursor: help;
+}
+
+
+pre[class*="language-"].line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"].line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+}
+
+    .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+    }
+
+        .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+</style>
+
+  
+    
+
+    <script src="asset/js/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+      function fixSidebarHeight(){
+        var w1 = $('.markdown-body').height();
+          var w2 = $('#sidebar').height();
+          if (w1 > w2) { $('#sidebar').height(w1); };
+      }
+      $(function(){
+        fixSidebarHeight();
+      })
+      $(window).load(function(){
+          fixSidebarHeight();
+      });
+     
+    </script>
+
+
+
+  </body>
+</html>

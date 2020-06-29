@@ -1,0 +1,692 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  Linux - 阿勒西的小屋
+  
+  </title>
+  
+  
+  <link href="atom.xml" rel="alternate" title="阿勒西的小屋" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+ 
+<script type="text/javascript">
+  function before_search(){
+    var searchVal = 'site: ' + document.getElementById('search_input').value;
+    document.getElementById('search_q').value = searchVal;
+    return true;
+  }
+</script>
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+
+  <section class="top-bar-section">
+  <div class="row">
+      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
+        <ul id="main-menu" class="left">
+        
+        <li id=""><a target="self" href="index.html">Home</a></li>
+        
+        <li id=""><a target="_self" href="archives.html">Archives</a></li>
+        
+        </ul>
+
+        <ul class="right" id="search-wrap">
+          <li>
+<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
+    <input type="hidden" id="search_q" name="q" value="" />
+    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
+</form>
+</li>
+          </ul>
+      </div></div>
+  </div>
+  </section>
+
+</nav>
+
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; 阿勒西的小屋</span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+        
+        <li><a target="self" href="index.html">Home</a></li>
+        
+        <li><a target="_self" href="archives.html">Archives</a></li>
+        
+
+    <li><label>Categories</label></li>
+
+        
+            <li><a href="Tech.html">Tech</a></li>
+        
+            <li><a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">读书笔记</a></li>
+         
+
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+
+        <section id="main-content" role="main" class="scroll-container">
+        
+       
+
+ <script type="text/javascript">
+	$(function(){
+		$('#menu_item_index').addClass('is_active');
+	});
+</script>
+<div class="row">
+	<div class="large-8 medium-8 columns">
+		<div class="markdown-body home-categories">
+		
+			<div class="article">
+                <a class="clearlink" href="15934218730531.html">
+                
+                  <h1>yaourt/pacman加速3连</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<p>这两天更新包的时候感觉速度有点慢，于是就做了一些优化改进，顺手总结一下</p>
+
+<ol>
+<li><p>改源<br/>
+将下载源改成国内源是最常见的一种，不过<code>Arch</code>一般在安装的时候就会进行改源操作。</p>
+<p>在<code>/etc/pacman.d/mirrorlist</code>中包含的源已经很全了，我们只需要将不需要的一些国外源注释掉或者删掉就行了。</p>
+<p>另外，我们一般也会添加一下<code>archlinuxcn</code>的镜像源。</p>
+<p>只需要修改一下<code>/etc/pacman.conf文件</code>，在最底下添加</p>
+<pre><code class="language-ini">[archlinuxcn]
+Server = https://mirrors.ustc.edu.cn/archlinuxcn/$arch
+</code></pre>
+<p>然后安装一下<code>archlinuxcn-keyring</code></p>
+<pre><code class="language-shell">yaourt -S archlinuxcn-keyring
+</code></pre></li>
+<li><p>并行<br/>
+<code>pacman</code>默认是使用<code>wget</code>进行下载的，我们可以在配置中，将它改为其他的多线程下载工具</p>
+<p>编辑配置文件<code>/etc/pacman.conf</code>，添加以下参数</p>
+<pre><code class="language-shell">XferCommand = /usr/bin/aria2c -s 5 %u
+</code></pre>
+<p>可以调节<code>-s</code>后面的参数，修改并行数</p></li>
+<li><p>加代理<br/>
+有时候我们下载国外网站的一些包的时候可能需要科学上网，下面提供一种方法可以让命令行通过ss进行科学上网</p>
+<pre><code class="language-shell"># 安装privoxy
+sudo pacman -S privoxy<br/>
+# 编辑配置文件<br/>
+sudo vim /etc/privoxy/config<br/>
+# 在文件中添加一行（最后有一个点，别漏了）<br/>
+forward-socks5 / 127.0.0.1:7070 .<br/>
+# 启动privoxy服务<br/>
+sudo systemctl start privoxy.service<br/>
+# 配置环境变量<br/>
+export https_proxy=127.0.0.1:8118<br/>
+export http_proxy=127.0.0.1:8118
+</code></pre></li>
+</ol>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2018/01/08</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='Arch.html'>Arch</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+			<div class="article">
+                <a class="clearlink" href="15934220934752.html">
+                
+                  <h1>安装合集</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<blockquote>
+<p>汇总了一些常见软件的安装命令，复制即用，炒鸡简单【CentOS】</p>
+</blockquote>
+
+<h2 id="toc_0">EPEL【yum】</h2>
+
+<p><code>epel</code>几乎是<code>CentOS</code>的必备很多软件和依赖都可以在<code>epel</code>中找到</p>
+
+<pre><code class="language-shell">yum install epel-release
+</code></pre>
+
+<h2 id="toc_1">MySQL【yum】</h2>
+
+<pre><code class="language-shell"># 安装 Percona 仓库
+yum install http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm 
+# mysql5.7 
+yum install Percona-Server-client-57 Percona-Server-devel-57 Percona-Server-server-57 Percona-Server-shared-57 
+# mysql5.6 
+yum install Percona-Server-client-56 Percona-Server-devel-56 Percona-Server-server-56 Percona-Server-shared-56 
+# 相关的软件和工具 
+yum install percona-xtrabackup-24 percona-toolkit 
+# mysql5.7的一些准备工作
+# mysql5.7初始化
+$ mysqld --initialize
+# mysql5.7中使用了一些新的密码策略，所以我们的配置会麻烦一些
+# mysql5.7中，root用户是有初始密码的，改密码存在mysql的错误日志中
+$ grep &quot;password&quot; /var/log/mysqld.log
+2017-06-17T12:25:17.375581Z 1 [Note] A temporary password is generated for root@localhost: cul+b=F7vF*o
+# mysql5.7中会检查密码的复杂度，简单的密码无法被设置，我们可以关闭该策略，在生产环境中不建议这么做
+set global validate_password_policy=0;
+# 虽然我们可以设置简单的密码了，但是mysql对于密码的长度还是有要求的，该值也可以被修改，同步不建议在生产环境这么做
+set global validate_password_length=1;
+# 然后我们就可以修改root用户的密码了
+ALTER USER USER() IDENTIFIED BY &#39;123456&#39;;
+</code></pre>
+
+<h2 id="toc_2">Redis【yum】</h2>
+
+<pre><code class="language-shell"># Redis在epel中就有，不过版本一般比较老，要安装新版的redis可以在remi源中找
+# 安装 remi 源
+# CentOS6版本的remi源
+yum install https://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-6.rpm 
+# CentOS7版本的remi源
+yum install https://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-7.rpm 
+# 启用remi，并查看可以安装的redis版本
+yum --enablerepo=remi list redis --showduplicates
+# 选择合适的版本安装就可以了，软件名和版本号之间用“-”链接
+</code></pre>
+
+<h2 id="toc_3">NodeJS【yum】</h2>
+
+<pre><code class="language-shell"># 安装9.x的仓库
+curl -sL https://rpm.nodesource.com/setup_9.x | bash -
+# 安装8.x的仓库
+curl -sL https://rpm.nodesource.com/setup_8.x | bash -
+# 安装nodejs
+yum install -y nodejs
+# 安装cnpm
+npm install -g cnpm --registry=https://registry.npm.taobao.org
+</code></pre>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2018/01/03</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='CentOS.html'>CentOS</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+			<div class="article">
+                <a class="clearlink" href="15934280345906.html">
+                
+                  <h1>tilda 无法设置透明模式</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<p>一觉醒来打开电脑，发现日常使用的<code>tilda</code>终端忽然无法显示<code>透明</code>特效了。</p>
+
+<p>重新进入首选项进行配置，但是根本不管用。</p>
+
+<p>google一下，发现<code>github</code>上有相关的<a href="https://github.com/lanoxx/tilda/issues/228"><code>issue</code></a>。</p>
+
+<p>有人说是<code>配置文件</code>的问题。但是我修改配置文件后依然无效。</p>
+
+<p>有人说是<code>系统设置</code>的问题。于是打开<code>系统设置</code>（不同的电脑设置的不一样，我是 <code>Arch</code> + <code>KDE</code>）搜索<code>composit（混合器）</code>，点进去就发现有报错，说是后端渲染OpenGL崩溃了，在该页面重新配置OpenGL，应用配置。</p>
+
+<p><img src="media/15934280345906/15934281297318.jpg" alt="opengl_err"/></p>
+
+<p>然后关闭<code>tilda</code>重新打开，<code>tilda</code>又可以显示透明特效了。</p>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2017/12/25</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='Arch.html'>Arch</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+              
+
+
+			<div class="row">
+			  <div class="large-6 columns">
+			  <p class="text-left" style="padding-top:25px;">
+			   
+			  </p>
+			  </div>
+			  <div class="large-6 columns">
+			<p class="text-right" style="padding-top:25px;">
+			
+			</p>
+			  </div>
+			</div>
+		</div>
+	</div><!-- large 8 -->
+
+ <div class="large-4 medium-4 columns">
+  <div class="hide-for-small">
+    <div id="sidebar" class="sidebar">
+          <div id="site-info" class="site-info">
+            
+                <h1>阿勒西的小屋</h1>
+                <div class="site-des"></div>
+                <div class="social">
+
+
+
+
+
+
+
+
+
+
+
+  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
+                
+              	 </div>
+          	</div>
+
+             
+
+              <div id="site-categories" class="side-item ">
+                <div class="side-header">
+                  <h2>Categories</h2>
+                </div>
+                <div class="side-content">
+
+      	<p class="cat-list">
+        
+            <a href="Tech.html"><strong>Tech</strong></a>
+        
+            <a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html"><strong>读书笔记</strong></a>
+         
+        </p>
+
+
+                </div>
+              </div>
+
+              <div id="site-categories" class="side-item">
+                <div class="side-header">
+                  <h2>Recent Posts</h2>
+                </div>
+                <div class="side-content">
+                <ul class="posts-list">
+	      
+		      
+			      <li class="post">
+			        <a href="15934181114037.html"><超越感觉：批判性思考指南>读书笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934177615172.html">< MySQL Innternals Manual >阅读笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934194114231.html">为InnoDB存储引擎配置内存分配器</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934197733993.html">同步MySQL增量数据到ClickHouse</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15934208816740.html">python中的迭代</a>
+			      </li>
+		     
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		   
+		  		</ul>
+                </div>
+              </div>
+        </div><!-- sidebar -->
+      </div><!-- hide for small -->
+</div><!-- large 4 -->
+
+</div><!-- row -->
+
+ <div class="page-bottom clearfix">
+  <div class="row">
+   <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+figure{margin: 0;padding: 0;}
+figcaption{text-align:center;}
+
+/* PrismJS 1.14.0
+ http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
+/**
+ * prism.js default theme for JavaScript, CSS and HTML
+ * Based on dabblet (http://dabblet.com)
+ * @author Lea Verou
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+    color: black;
+    background: none;
+    text-shadow: 0 1px white;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+    text-shadow: none;
+    background:#b3d4fc;
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+    text-shadow: none;
+    background: #b3d4fc;
+}
+
+@media print {
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none;
+    }
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background: #F7F7F7;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+    padding: .1em;
+    border-radius: .3em;
+    white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: slategray;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.namespace {
+    opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+    background: hsla(0, 0%, 100%, .5);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #DD4A68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+.token.italic {
+    font-style: italic;
+}
+
+.token.entity {
+    cursor: help;
+}
+
+
+pre[class*="language-"].line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"].line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+}
+
+    .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+    }
+
+        .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+</style>
+
+  
+    
+
+    <script src="asset/js/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+      function fixSidebarHeight(){
+        var w1 = $('.markdown-body').height();
+          var w2 = $('#sidebar').height();
+          if (w1 > w2) { $('#sidebar').height(w1); };
+      }
+      $(function(){
+        fixSidebarHeight();
+      })
+      $(window).load(function(){
+          fixSidebarHeight();
+      });
+     
+    </script>
+
+
+
+  </body>
+</html>
