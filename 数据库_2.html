@@ -1,627 +1,266 @@
-<!doctype html>
-<html class="no-js" lang="en">
+<!DOCTYPE html>
+<html lang="zh">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>
+      
+    数据库 - 阿勒西的小屋
     
-  数据库 - 阿勒西的小屋
-  
-  </title>
-  
-  
-  <link href="atom.xml" rel="alternate" title="阿勒西的小屋" type="application/atom+xml">
-    <link rel="stylesheet" href="asset/css/foundation.min.css" />
-    <link rel="stylesheet" href="asset/css/docs.css" />
-    <script src="asset/js/vendor/modernizr.js"></script>
-    <script src="asset/js/vendor/jquery.js"></script>
- 
-<script type="text/javascript">
-  function before_search(){
-    var searchVal = 'site: ' + document.getElementById('search_input').value;
-    document.getElementById('search_q').value = searchVal;
-    return true;
-  }
-</script>
-  </head>
-  <body class="antialiased hide-extras">
+    </title>
     
-    <div class="marketing off-canvas-wrap" data-offcanvas>
-      <div class="inner-wrap">
 
-
-<nav class="top-bar docs-bar hide-for-small" data-topbar>
-
-
-  <section class="top-bar-section">
-  <div class="row">
-      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
-        <ul id="main-menu" class="left">
-        
-        <li id=""><a target="self" href="index.html">Home</a></li>
-        
-        <li id=""><a target="_self" href="archives.html">Archives</a></li>
-        
-        </ul>
-
-        <ul class="right" id="search-wrap">
-          <li>
-<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
-    <input type="hidden" id="search_q" name="q" value="" />
-    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
-</form>
-</li>
-          </ul>
-      </div></div>
-  </div>
-  </section>
-
-</nav>
-
-        <nav class="tab-bar show-for-small">
-  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
-    <span> &nbsp; 阿勒西的小屋</span>
-  </a>
-</nav>
-
-<aside class="left-off-canvas-menu">
-      <ul class="off-canvas-list">
-        
-        <li><a target="self" href="index.html">Home</a></li>
-        
-        <li><a target="_self" href="archives.html">Archives</a></li>
-        
-
-    <li><label>Categories</label></li>
-
-        
-            <li><a href="Tech.html">Tech</a></li>
-        
-            <li><a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">读书笔记</a></li>
-         
-
-      </ul>
-    </aside>
-
-<a class="exit-off-canvas" href="#"></a>
-
-
-        <section id="main-content" role="main" class="scroll-container">
-        
-       
-
- <script type="text/javascript">
-	$(function(){
-		$('#menu_item_index').addClass('is_active');
-	});
-</script>
-<div class="row">
-	<div class="large-8 medium-8 columns">
-		<div class="markdown-body home-categories">
-		
-			<div class="article">
-                <a class="clearlink" href="15934252934518.html">
+    
+    
+    <link href="atom.xml" rel="alternate" title="阿勒西的小屋" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/style.min.css">
+    <link rel="stylesheet" href="asset/css/doc.css">
+    <script src="asset/app.js"></script>
+</head>
+  <body>
+    <section class="hero">
+      <div class="hero-head">
+          <nav class="navbar" role="navigation" aria-label="main navigation">
+              <div class="container">
+              <div class="navbar-brand">
                 
-                  <h1>ProxySQL安装与配置</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<h2 id="toc_0">安装</h2>
-
-<ul>
-<li>从<a href="https://github.com/sysown/proxysql/releases">github</a>上下载相应的rpm包</li>
-<li>使用 yum localinstall proxysql-1.4.1-1-centos7.x86_64.rpm 安装</li>
-</ul>
-
-<h2 id="toc_1">启动</h2>
-
-<ul>
-<li>Service proxysql start</li>
-</ul>
-
-<h2 id="toc_2">配置文件</h2>
-
-<ul>
-<li>文本配置文件
-<ul>
-<li>ProxyQSL使用一个配置文件的（/etc/proxysql.cnf），但是这个配置文件只在第一次启动时使用，一般不需要修改</li>
-</ul></li>
-<li>SQLite配置文件
-<ul>
-<li>ProxySQL在第一次启动后就会使用SQLite文件（/var/lib/proxysql/proxysql.db）来加载和持久化配置项，并且这种配置方式支持在线修改</li>
-</ul></li>
-</ul>
-
-<h2 id="toc_3">登录</h2>
-
-<ul>
-<li>ProxySQL默认的管理端口是6032</li>
-<li>ProxySQL默认的服务端口是6033</li>
-<li>ProxySQL默认的用户名和密码都是admin</li>
-</ul>
-
-<h2 id="toc_4">库结构</h2>
-
-<ul>
-<li><p>登录到管理端口，使用show databases;<br/>
-<img src="media/15934252934518/15934254906231.jpg" alt=""/></p></li>
-<li><p>在管理端口中有4个库，分别是：</p>
-<ul>
-<li><p><code>Admin</code>：默认数据库，存放服务器、用户、路由等的配置信息。以”runtime_“开头的表是当前运行中的配置，不能直接修改。通过修改没有前缀的表，使用”LOAD“加载配置，使用”SAVE“持久化配置。</p></li>
-<li><p><code>Disk</code>：存储配置的SQLite数据库</p></li>
-<li><p><code>Stats</code>：各种命令的统计信息</p></li>
-<li><p><code>Monitor</code>：对于后端数据库的监控信息</p></li>
-</ul></li>
-</ul>
-
-<h2 id="toc_5">配置表</h2>
-
-<ul>
-<li><p>各种配置所使用到的表都在main库中</p>
-<pre><code class="language-sql">mysql&gt; show tables from main;
-</code></pre>
-<table>
-<thead>
-<tr>
-<th>tables</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>global_variables</td>
-<td>全局变量，，具体可见<a href="https://github.com/sysown/proxysql/wiki/Global-variables">https://github.com/sysown/proxysql/wiki/Global-variables</a></td>
-</tr>
-<tr>
-<td>mysql_collations</td>
-<td>字符集相关</td>
-</tr>
-<tr>
-<td>mysql_group_replication_hostgroups</td>
-<td>MySQL Group Replication信息</td>
-</tr>
-<tr>
-<td>mysql_query_rules</td>
-<td>路由规则信息</td>
-</tr>
-<tr>
-<td>mysql_replication_hostgroups</td>
-<td>定义hostgroup的主从信息</td>
-</tr>
-<tr>
-<td>mysql_servers</td>
-<td>后端MySQL节点</td>
-</tr>
-<tr>
-<td>mysql_users</td>
-<td>用户配置</td>
-</tr>
-<tr>
-<td>proxysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_global_variables</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_group_replication_hostgroups</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_query_rules</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_replication_hostgroups</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_users</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_proxysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_scheduler</td>
-<td></td>
-</tr>
-<tr>
-<td>scheduler</td>
-<td>定时器</td>
-</tr>
-</tbody>
-</table></li>
-<li><p>数据库节点设置（mysql_servers）</p>
-<ul>
-<li>这张表主要配置hostgroup的相关信息。路由时会根据设置的规则将相关SQL路由到指定的hostgroup。而在同一hostgroup中又根据权重分发SQL语句。</li>
-</ul></li>
-<li><p>用户设置（mysql_users）</p>
-<ul>
-<li>配置客户端连接proxysql（frontend）和proxysql连接数据库（backend）的用户。目前这两个值都默认为1。以后可能会分开。</li>
-</ul></li>
-<li><p>主从关系设置（mysql_replication_hostgroups）</p>
-<ul>
-<li>根据read_only值来判断主从。可以不配置。</li>
-</ul></li>
-<li><p>路由规则设置（mysql_query_rules）</p>
-<ul>
-<li><p>Proxysql会根据主键rule_id的顺序加载路由规则。</p></li>
-<li><p>Username/client_addr/schemaname：只有用户、地址和schema匹配时规则才会生效。</p></li>
-<li><p>Proxysql会先检查flagIN=0的规则</p></li>
-<li><p>如果规则匹配，且flagIN=flagOUT或者flagOUT=NULL或者apply=1，则应用这条规则；否则，根据flagOUT的值，去匹配下一条flagIN等于该值的规则</p></li>
-<li><p>Digest/match_digest/match_pattern：这三个值都是用来匹配查询的。</p>
-<ul>
-<li><p>Digest匹配的值类似于stats_mysql_query_digest表中的digest列<br/>
-<img src="media/15934252934518/15934261421202.jpg" alt=""/></p></li>
-<li><p>Match_digest匹配的值类似于stats_mysql_query_digest中的digest_text列<br/>
-<img src="media/15934252934518/15934261697335.jpg" alt=""/></p></li>
-<li><p>Match_pattern匹配的是未经修改过的SQL语句</p></li>
-</ul></li>
-<li><p>Negate_match_pattern：对match_digest/match_pattern的匹配值取反</p></li>
-<li><p>重写SQL：重写SQL最好使用match_pattern作为匹配项，使用replace_pattern作为重写后的SQL，二者都遵循正则表达式</p></li>
-</ul></li>
-</ul>
-
-                        
-                      </div>
-                  </div>
-                </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
-                  
-                    <span class="date">2017/08/23</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='ProxySQL.html'>ProxySQL</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
-                      
-
-                       
-                  </span>
-                  </div>
-                </div>
-              </div><!-- article -->
-        
-			<div class="article">
-                <a class="clearlink" href="15934251387696.html">
+                <a target="self" class="navbar-item " href="index.html">Home</a>
                 
-                  <h1>mycat的表级DML权限设置无法生效问题的解决</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<p>在<code>mycat</code>中，可以通过对<code>server.xml</code>文件里的<code>user</code>段下的<code>privileges</code>段进行配置，而从进行更细化的权限控制。</p>
-
-<p>但是在实际操作中，配置了<code>property</code>段后，<code>mycat</code>却会报出配置文件错误的信息。</p>
-
-<p>我们可以在错误日志中看到具体的信息<br/>
-<img src="media/15934251387696/15934251751286.jpg" alt=""/></p>
-
-<p>错误显示元素类型为<code>&quot;user&quot;</code>的内容必须匹配<code>&quot;(property)+&quot;</code>。</p>
-
-<p>显然是我们添加了<code>privileges</code>标签导致的错误，而<code>mycat</code>却要求<code>user</code>下必须匹配<code>property</code>标签，一定是在校验<code>xml</code>的时候出来问题。</p>
-
-<p>我们查看<code>github</code>中<code>mycat</code>的源码，在<code>src/main/resources</code>目录下的<code>server.dtd</code>文件中我们可以看到对<code>server.xml</code>的校验是<code>&lt;!ELEMENT user (property+,privileges*)&gt;</code></p>
-
-<p>这一行说明在<code>user</code>段下是允许使用<code>privileges</code>标签的，但是必须在<code>property</code>之后，显然我们的配置是符合规范的，可是我们运行<code>mycat</code>是却会报错。</p>
-
-<p>我们再来查看我们部署的<code>mycat</code>中<code>server.dtd</code>文件是怎么写的，</p>
-
-<p>在<code>mycat</code>目录下的<code>lib/Mycat-server-1.6-RELEASE.jar</code>包中我们可以看到<code>server.dtd</code>文件显示的是<code>&lt;!ELEMENT user (property+)&gt;</code></p>
-
-<p>这和<code>github</code>中的不一样，这个校验只允许<code>property</code>标签。</p>
-
-<p>问题的原因就是，官方最新打包的程序中的配置和<code>github</code>中的源码不一致，并且不支持<code>privileges</code>标签。</p>
-
-<p>那么解决的方法就很简单了，将<code>github</code>中的<code>server.dtd</code>文件替换掉<code>jar</code>包中的相应文件，然后重新部署。</p>
-
-<p>至此，问题解决。</p>
-
-                        
-                      </div>
-                  </div>
-                </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
-                  
-                    <span class="date">2017/07/15</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='MyCat.html'>MyCat</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
-                      
-
-                       
-                  </span>
-                  </div>
-                </div>
-              </div><!-- article -->
-        
-			<div class="article">
-                <a class="clearlink" href="15934248640391.html">
+                <a target="_self" class="navbar-item " href="archives.html">Archives</a>
                 
-                  <h1>使用iptables对redis做访问限制</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<p>在redis的配置文件中我们可以使用bind参数对访问redis的来源ip做限制，但是bind参数只支持对每个ip使用都好分隔的方式做限制，而不能直接限制ip段。</p>
 
-<p>为了更好的控制redis的访问来源，我们使用iptables对redis做访问限制。</p>
-
-<p>由于我们在一台服务器上启动了多个redis实例，这里使用multiport模块同时对多个端口配置规则，只允许192.168和10.10网段的服务器访问，拒绝其他的服务器访问，并保存我们的配置</p>
-
-<pre><code class="language-shell">iptables -m multiport -I INPUT -s 192.168.0.0/16 -p tcp --dport 6369,6379,6389,6399 -j ACCEPT
-iptables -m multiport -I INPUT -s 10.10.0.0/16 -p tcp --dport 6369,6379,6389,6399 -j ACCEPT
-iptables -m multiport -A INPUT -p tcp --dport 6369,6379,6389,6399 -j REJECT
-service iptables save
-</code></pre>
-
-<p>使用connlimit模块对每个redis实例做连接数限制，每个端口只支持1000个连接，并保存我们的配置</p>
-
-<pre><code class="language-shell">iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6379 -j REJECT
-iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6380 -j REJECT
-iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6381 -j REJECT
-iptables -m connlimit --connlimit-above 1000 -A INPUT -p tcp --dport 6382 -j REJECT
-service iptables save
-</code></pre>
-
-                        
-                      </div>
-                  </div>
+                <a role="button" id="navbarSNSRssSwitchBtn" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarSNSRssButtons">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
                 </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
-                  
-                    <span class="date">2017/07/13</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='Redis.html'>Redis</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
-                      
-
-                       
-                  </span>
-                  </div>
-                </div>
-              </div><!-- article -->
-        
-			<div class="article">
-                <a class="clearlink" href="15934247469712.html">
-                
-                  <h1>使用gh-ost进行在线表结构修改</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<p><code>gh-ost</code>是<code>github</code>开源的一款在线表结构修改工具，能够在不锁表的情况下修改表结构。</p>
-
-<p>和<code>percona</code>的<code>pt-osc</code>一样，修改表结构的流程也是，新建一张表，修改表结构，同步源表的数据，将两张表改名，用新表替换旧表。至此，完成在线修改表结构。</p>
-
-<p>与<code>pt-osc</code>不同的是，<code>pt-osc</code>使用的是触发器来维护在数据同步过程中旧表数据的改动，并将这些改动映射到新表。而在<code>gh-ost</code>中则使用的是<code>binlog</code>的方式。</p>
-
-<p>使用<code>binlog</code>比使用触发器的有点主要在于：</p>
-
-<p>维护触发器的开销比较大，这个开销包括触发器在执行时代码的开销和锁的开销。而使用<code>binlog</code>的开销更小。<br/>
-一旦使用了触发器就无法暂停。而使用<code>binlog</code>的方式则更灵活，在同步的过程中可以暂停，还可以调整一些参数。<br/>
-下面是一个<code>gh-ost</code>使用的例子：</p>
-
-<pre><code class="language-shell">./gh-ost -throttle-control-replicas=&#39;10.10.0.1:3306&#39; -host &#39;10.60.0.124&#39; -port &#39;3306&#39; -user &#39;admin&#39; -password &#39;123456&#39; -database &#39;testdb&#39; -table &#39;testtable&#39; -verbose -alter &quot;CHANGE score score FLOAT(5,2) NOT NULL DEFAULT &#39;0.00&#39; COMMENT &#39;比分&#39;&quot;  -execute
-</code></pre>
-
-<p>其中</p>
-
-<p><code>-throttle-control-replicas</code> 列出了一个以逗号分隔的从库列表，gh-ost会根据该列表去检查从库的延时，当延时过大（默认1500s）时会暂停。</p>
-
-<p><code>-host</code> 默认填写的是从库ip，gh-ost会根据从库自动找到主库，这里使用从库ip是因为gh-ost默认是从从库读取数据写到主库的，这样可以减小主库的压力，如果这里填写了主库的ip，需要在后面附加上-allow-on-master选项，这样就可以从主库读数据并写到主库了。</p>
-
-<p><code>-verbose</code> 运行时输出详细信息</p>
-
-<p><code>-alter</code> 表结构修改语句的主体部分</p>
-
-<p><code>-execute</code> 执行操作，如果不加的话，会打印整个流程，但不会执行</p>
-
-<p>以上是一个简单的用法和一些基本的参数说明。</p>
-
-<p>github地址：<a href="https://github.com/github/gh-ost">https://github.com/github/gh-ost</a></p>
-
-                        
-                      </div>
-                  </div>
-                </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
-                  
-                    <span class="date">2017/07/08</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='MySQL.html'>MySQL</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
-                      
-
-                       
-                  </span>
-                  </div>
-                </div>
-              </div><!-- article -->
-        
-              
-
-
-			<div class="row">
-			  <div class="large-6 columns">
-			  <p class="text-left" style="padding-top:25px;">
-			   <a href="数据库_1.html">&laquo; Prev Page</a>  
-			  </p>
-			  </div>
-			  <div class="large-6 columns">
-			<p class="text-right" style="padding-top:25px;">
-			
-			</p>
-			  </div>
-			</div>
-		</div>
-	</div><!-- large 8 -->
-
- <div class="large-4 medium-4 columns">
-  <div class="hide-for-small">
-    <div id="sidebar" class="sidebar">
-          <div id="site-info" class="site-info">
+              </div>
             
-                <h1>阿勒西的小屋</h1>
-                <div class="site-des"></div>
-                <div class="social">
-
-
-
-
-
-
-
-
-
-
-
-  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
-                
-              	 </div>
-          	</div>
-
-             
-
-              <div id="site-categories" class="side-item ">
-                <div class="side-header">
-                  <h2>Categories</h2>
+              <div id="navbarSNSRssButtons" class="navbar-menu">
+                <div class="navbar-start">
+                  
                 </div>
-                <div class="side-content">
+            
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <!--buttons start-->
+                    <div class="buttons">
+                      
+                        
+                        
+                        
+                        
+                      
+                      <a href="atom.xml" target="_blank" title="RSS">
+                          <span class="icon is-large has-text-black-bis">
+                              <svg class="svg-inline--fa fa-rss fa-w-14 fa-lg" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rss" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"></path></svg><!-- <i class="fas fa-rss fa-lg"></i> -->
+                          </span>
+                      </a>
+                    </div>
+                    <!--buttons end-->
 
-      	<p class="cat-list">
-        
-            <a href="Tech.html"><strong>Tech</strong></a>
-        
-            <a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html"><strong>读书笔记</strong></a>
-         
-        </p>
-
-
+                  </div>
+                </div>
                 </div>
               </div>
-
-              <div id="site-categories" class="side-item">
-                <div class="side-header">
-                  <h2>Recent Posts</h2>
-                </div>
-                <div class="side-content">
-                <ul class="posts-list">
-	      
-		      
-			      <li class="post">
-			        <a href="15934181114037.html"><超越感觉：批判性思考指南>读书笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15934177615172.html">< MySQL Innternals Manual >阅读笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15934194114231.html">为InnoDB存储引擎配置内存分配器</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15934197733993.html">同步MySQL增量数据到ClickHouse</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15934208816740.html">python中的迭代</a>
-			      </li>
-		     
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		   
-		  		</ul>
-                </div>
-              </div>
-        </div><!-- sidebar -->
-      </div><!-- hide for small -->
-</div><!-- large 4 -->
-
-</div><!-- row -->
-
- <div class="page-bottom clearfix">
-  <div class="row">
-   <p class="copyright">Copyright &copy; 2015
-Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
-Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
-  </div>
-</div>
-
-        </section>
+            </nav>
       </div>
-    </div>
+
+ 
+<div class="hero-body ct-body">
+        <div class="container">
+              <div class="columns is-centered">
+                  <div class="column  is-four-fifths">
+                      <div class="columns is-mobile">
+                          <div class="column">
+                              <h1 class="title">
+阿勒西的小屋
+              
+                              </h1>
+                              <h2 class="subtitle">
+                                 
+                              </h2>
+                          </div>
+                          <div class="column is-narrow"><figure class="image is-128x128">
+                            
+                            </figure></div>
+                      </div>
+                        
+                      
+                  </div>
+                  
+                </div>
+            
+              
+        
+        </div>
+      </div>
+</section>
+<section class="ct-body">
+      <div class="container">
+          <div class="columns is-variable bd-klmn-columns is-4">
+              <div class="column is-two-thirds">
+                
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15934252934518.html"> 
+                            <h2 class="title">ProxySQL安装与配置</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15934252934518.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2017/08/23</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='ProxySQL.html'>ProxySQL</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15934251387696.html"> 
+                            <h2 class="title">mycat的表级DML权限设置无法生效问题的解决</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15934251387696.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2017/07/15</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='MyCat.html'>MyCat</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15934248640391.html"> 
+                            <h2 class="title">使用iptables对redis做访问限制</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15934248640391.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2017/07/13</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='Redis.html'>Redis</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15934247469712.html"> 
+                            <h2 class="title">使用gh-ost进行在线表结构修改</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15934247469712.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2017/07/08</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='MySQL.html'>MySQL</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+
+                  <nav class="pagination is-centered" role="navigation" aria-label="pagination">
+                    <a class="pagination-previous"   href="数据库_1.html" ><span class="tran-prev-page">&laquo; Prev Page</span></a>  
+                    <a class="pagination-next"  disabled="disabled" ><span class="tran-next-page">Next Page &raquo;</span></a>                   
+                  </nav>
+
+              </div><!-- end column -->
+              <div class="column">
+                  <div class="card">
+                      <header class="card-header">
+                        <p class="card-header-title">
+                           <span class="tran-site-categories">Categories</span> 
+                        </p>
+                     
+                      </header>
+                      <div class="card-content site-categories">
+                        <div class="content"> 
+                          <ul>
+                          
+                                <li><a href="Tech.html">Tech</a>
+                                   <ul> 
+                                  
+                                        <li><a href="%E6%95%B0%E6%8D%AE%E5%BA%93.html">数据库</a></li>
+                                  
+                                        <li><a href="%E5%BC%80%E5%8F%91.html">开发</a></li>
+                                  
+                                        <li><a href="Linux.html">Linux</a></li>
+                                  
+                                   </ul> 
+                                </li> 
+                          
+                                <li><a href="%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">读书笔记</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                          </ul>
+                        </div>
+                      </div>
+                     
+                    </div>
+
+                    <div class="card">
+                        <header class="card-header">
+                          <p class="card-header-title">
+                              <span class="tran-site-tags">Tags</span> 
+                          </p>
+                       
+                        </header>
+                        <div class="card-content site-tags">
+                          <div class="content">
+                           <div class="tags">
+                            
+                              <a class="tag is-link is-light" href="tag_gRPC.html">#gRPC</a> 
+                            
+                           </div>
+                             
+                          </div>
+                        </div>
+                       
+                      </div>
+
+              </div>
+            </div>
+
+          
+      </div>
+    </section>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+          <p>
+              Copyright &copy; 2019
+              Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+              Theme used <a target="_blank" href="https://bulma.io/">Bulma CSS</a>.
+          </p>
+        </div>
+      </footer>
 
 
 
@@ -640,215 +279,10 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-<style type="text/css">
-figure{margin: 0;padding: 0;}
-figcaption{text-align:center;}
-
-/* PrismJS 1.14.0
- http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
-/**
- * prism.js default theme for JavaScript, CSS and HTML
- * Based on dabblet (http://dabblet.com)
- * @author Lea Verou
- */
-
-code[class*="language-"],
-pre[class*="language-"] {
-    color: black;
-    background: none;
-    text-shadow: 0 1px white;
-    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-    
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
-    hyphens: none;
-}
-
-pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
-code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
-    text-shadow: none;
-    background:#b3d4fc;
-}
-
-pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
-code[class*="language-"]::selection, code[class*="language-"] ::selection {
-    text-shadow: none;
-    background: #b3d4fc;
-}
-
-@media print {
-    code[class*="language-"],
-    pre[class*="language-"] {
-        text-shadow: none;
-    }
-}
-
-/* Code blocks */
-pre[class*="language-"] {
-    padding: 1em;
-    margin: .5em 0;
-    overflow: auto;
-}
-
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-    background: #F7F7F7;
-}
-
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-    padding: .1em;
-    border-radius: .3em;
-    white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-    color: slategray;
-}
-
-.token.punctuation {
-    color: #999;
-}
-
-.namespace {
-    opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
-    color: #905;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-    color: #690;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-    color: #9a6e3a;
-    background: hsla(0, 0%, 100%, .5);
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-    color: #07a;
-}
-
-.token.function,
-.token.class-name {
-    color: #DD4A68;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-    color: #e90;
-}
-
-.token.important,
-.token.bold {
-    font-weight: bold;
-}
-.token.italic {
-    font-style: italic;
-}
-
-.token.entity {
-    cursor: help;
-}
-
-
-pre[class*="language-"].line-numbers {
-    position: relative;
-    padding-left: 3.8em;
-    counter-reset: linenumber;
-}
-
-pre[class*="language-"].line-numbers > code {
-    position: relative;
-    white-space: inherit;
-}
-
-.line-numbers .line-numbers-rows {
-    position: absolute;
-    pointer-events: none;
-    top: 0;
-    font-size: 100%;
-    left: -3.8em;
-    width: 3em; /* works for line-numbers below 1000 lines */
-    letter-spacing: -1px;
-    border-right: 1px solid #999;
-
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-
-}
-
-    .line-numbers-rows > span {
-        pointer-events: none;
-        display: block;
-        counter-increment: linenumber;
-    }
-
-        .line-numbers-rows > span:before {
-            content: counter(linenumber);
-            color: #999;
-            display: block;
-            padding-right: 0.8em;
-            text-align: right;
-        }
-
-</style>
 
   
     
 
-    <script src="asset/js/foundation.min.js"></script>
-    <script>
-      $(document).foundation();
-      function fixSidebarHeight(){
-        var w1 = $('.markdown-body').height();
-          var w2 = $('#sidebar').height();
-          if (w1 > w2) { $('#sidebar').height(w1); };
-      }
-      $(function(){
-        fixSidebarHeight();
-      })
-      $(window).load(function(){
-          fixSidebarHeight();
-      });
-     
-    </script>
 
 
 
