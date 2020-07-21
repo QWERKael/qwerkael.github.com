@@ -129,6 +129,12 @@
 </li>
 </ul>
 </li>
+<li>
+<a href="#toc_6">1.2.2 Major Directories: client</a>
+</li>
+<li>
+<a href="#toc_7">1.2.3 Major Directories: myisam</a>
+</li>
 </ul>
 </li>
 </ul>
@@ -196,6 +202,16 @@ Switched to a new branch &#39;5.5&#39;
 <pre><code class="language-shell">shell&gt; ./BUILD/compile-pentium-debug --prefix=$HOME/mysql-bin
 </code></pre>
 
+<blockquote>
+<p><code>compile-pentium-debug</code>其实就是一个简单的shell脚本, 在8.0里面已经没有BUILD文件夹了</p>
+
+<pre><code class="language-shell"># compile-pentium-debug 脚本
+path=`dirname $0`
+cmake $path/.. -DWITH_DEBUG=1
+make
+</code></pre>
+</blockquote>
+
 <p>这个命令会调用一个批处理文件生成MySQL的服务端和客户端的可执行程序<br/>
 如果缺少相应的依赖包, 会执行失败<br/>
 编译完后, 使用以下命令安装</p>
@@ -222,12 +238,24 @@ shell&gt; $HOME/mysql-bin/scripts/mysql_install_db \
 
 <h5 id="toc_5">1.2.1.2 Running a Test with the Debugger</h5>
 
-<p>通过嵌入模式运行一个名为<code>some.test</code>的测试:</p>
+<p>通过<code>嵌入模式(embedded mode)</code>运行一个名为<code>some.test</code>的测试:</p>
 
 <ol>
 <li>运行<code>libmysqld/examples/test_run --gdb some.test</code>命令来创建一个<code>libmysqld/examples/test-gdbinit</code>文件, 这个文件包含了<code>mysqltest</code>所需的参数</li>
-<li></li>
+<li>因为在<code>test-run --gdb</code>命令执行完成之后, <code>test-gdbinit</code>文件就会被移除, 所以我们要在那之前将<code>test-gdbtest</code>文件先拷贝一个备份(比如叫做<code>some-gdbtest</code>)</li>
+<li>选一个调试器(debugger)加载<code>libmysqld/examples/mysqltest_embedded</code>, 比如<code>gdb mysqltest_embedded</code></li>
+<li>在debugger里面执行<code>--sou some-gdbtest</code></li>
 </ol>
+
+<p>如果只是想调试嵌入式服务的一些查询, 而不是测试脚本, 那么只需要运行<code>libmysqld/examples/mysql</code>就可以了. 他是mysql常用工具的克隆, 是基于服务器内嵌的. 能在<code>gdb</code>和其他debugger下良好工作.</p>
+
+<h3 id="toc_6">1.2.2 Major Directories: client</h3>
+
+<p>这里面主要都是些客户端程序的源码</p>
+
+<h3 id="toc_7">1.2.3 Major Directories: myisam</h3>
+
+<p>在最新的<code>MySQL8.0</code>里面, <code>MyISAM</code>存储引擎已经不再使用了, <code>MySQL</code>的引擎源码存储在<code>storage</code>目录底下</p>
 
                   </article>
                   <div class="comments-wrap">
