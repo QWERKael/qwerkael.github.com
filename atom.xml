@@ -4,13 +4,298 @@
   <title><![CDATA[阿勒西的小屋]]></title>
   <link href="http://qwerkael.cn/atom.xml" rel="self"/>
   <link href="http://qwerkael.cn/"/>
-  <updated>2020-07-01T18:51:13+08:00</updated>
+  <updated>2020-07-21T17:04:30+08:00</updated>
   <id>http://qwerkael.cn/</id>
   <author>
     <name><![CDATA[]]></name>
     
   </author>
   <generator uri="http://www.mweb.im/">MWeb</generator>
+  
+  <entry>
+    <title type="html"><![CDATA[在Go中调用Rust动态库]]></title>
+    <link href="http://qwerkael.cn/15959947592394.html"/>
+    <updated>2020-07-29T11:52:39+08:00</updated>
+    <id>http://qwerkael.cn/15959947592394.html</id>
+    <content type="html"><![CDATA[
+<h2 id="toc_0">使用cbindgen生成Rust代码的C绑定</h2>
+
+<p>编辑<code>Cargo.toml</code>文件</p>
+
+<pre><code class="language-toml">[lib]
+name = &quot;speaker&quot;
+path = &quot;src/plugins/speaker.rs&quot;
+crate-type = [&quot;cdylib&quot;]
+
+[build-dependencies]
+cbindgen = &quot;*&quot;
+</code></pre>
+
+<p>在<code>build.rs</code>中调用<code>cbindgen</code>生成头文件</p>
+
+<pre><code class="language-rust">extern crate cbindgen;
+
+fn main() {
+    let crate_dir = std::env::var(&quot;CARGO_MANIFEST_DIR&quot;).unwrap();
+
+    cbindgen::Builder::new()
+        .with_language(cbindgen::Language::C)
+        .with_crate(crate_dir)
+        .generate()
+        .expect(&quot;Unable to generate C bindings.&quot;)
+        .write_to_file(&quot;src/plugins/speaker.h&quot;);
+}
+</code></pre>
+
+<p>因为<code>cbindgen</code>默认会生成<code>C++</code>的头文件, 但是<code>cgo</code>只支持<code>C</code>库而不支持<code>C++</code>库, 所以我们需要用<code>with_language(cbindgen::Language::C)</code>的方式指定生成<code>C</code>的头文件<br/>
+现在我们用<code>Rust</code>写一个简单的动态库</p>
+
+<pre><code class="language-rust">#[no_mangle]
+pub extern &quot;C&quot; fn run() {
+    println!(&quot;Hello, speaker!&quot;);
+}
+</code></pre>
+
+<p>执行<code>cargo build</code>命令, 会生成头文件<code>speaker.h</code>和动态库文件<code>libspeaker.dylib</code></p>
+
+<h2 id="toc_1">使用cgo运行动态库</h2>
+
+<pre><code class="language-go">package main
+
+/*
+#cgo CFLAGS: -I./include
+#cgo LDFLAGS: -L./lib -lspeaker
+
+#include &lt;speaker.h&gt;
+*/
+import &quot;C&quot;
+
+func main() {
+    C.run()
+}
+</code></pre>
+
+<p>首先在代码中添加<code>import &quot;C&quot;</code>表示使用<code>cgo</code>特性<br/>
+在<code>import &quot;C&quot;</code>之前的注释中使用<code>#cgo</code>来设置编译和链接阶段的相关参数<br/>
+<code>CFLAGS</code>表示用于<code>C</code>编译器的选项, 使用<code>-I</code>指定头文件所在的目录<br/>
+<code>LDFLAGS</code>告诉链接器从哪里找寻库文件(在<code>unix</code>系统中, <code>ld</code>常作为<code>load</code>或者<code>loader</code>的缩写使用), 使用<code>-L</code>指定库所在的目录, 使用<code>-l</code>指定库名</p>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[在Rust中调用Rust动态库]]></title>
+    <link href="http://qwerkael.cn/15955630261644.html"/>
+    <updated>2020-07-24T11:57:06+08:00</updated>
+    <id>http://qwerkael.cn/15955630261644.html</id>
+    <content type="html"><![CDATA[
+<h2 id="toc_0">配置Cargo.toml</h2>
+
+<p>首先我们先在<code>Cargo.toml</code>中添加相关配置</p>
+
+<pre><code class="language-rust">[[bin]]
+name = &quot;master&quot;
+path = &quot;src/master/master.rs&quot;
+
+[lib]
+name = &quot;speaker&quot;
+path = &quot;src/plugins/speaker.rs&quot;
+crate-type = [&quot;cdylib&quot;]
+
+[dependencies]
+libloading = &quot;*&quot;
+</code></pre>
+
+<p>其中, <code>speaker</code>是动态库, <code>master</code>是调用动态库的主程序</p>
+
+<h2 id="toc_1">创建动态库</h2>
+
+<pre><code class="language-rust">#[no_mangle]
+pub extern fn run() {
+    println!(&quot;Hello, speaker!&quot;);
+}
+</code></pre>
+
+<p><code>#[no_mangle]</code>表示禁用<code>name mangling</code>, 它表示以原始的函数名编译函数, 因为在一些支持重载的语言中, 编译的函数名并不是在代码中声明的函数名, 而是函数名加参数类型.</p>
+
+<h2 id="toc_2">在主程序中调用动态库</h2>
+
+<pre><code class="language-rust">extern crate libloading as lib;
+
+fn call_dynamic() -&gt; Result&lt;u32, Box&lt;dyn std::error::Error&gt;&gt; {
+    let lib = lib::Library::new(&quot;/Data/Rust/learn4libloading/target/debug/libspeaker.dylib&quot;)?;
+    unsafe {
+        let func: lib::Symbol&lt;unsafe extern fn() -&gt; u32&gt; = lib.get(b&quot;run&quot;)?;
+        Ok(func())
+    }
+}
+
+fn main() {
+    println!(&quot;Hello, master!&quot;);
+    let rst = call_dynamic();
+    match rst {
+        Ok(i) =&gt; println!(&quot;{}&quot;, i),
+        Err(e) =&gt; println!(&quot;{}&quot;, e)
+    }
+
+}
+</code></pre>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[<编译原理>读书笔记]]></title>
+    <link href="http://qwerkael.cn/15953908368697.html"/>
+    <updated>2020-07-22T12:07:16+08:00</updated>
+    <id>http://qwerkael.cn/15953908368697.html</id>
+    <content type="html"><![CDATA[
+<h2 id="toc_0">第一章 引论</h2>
+
+<h3 id="toc_1">1.1　语言处理器</h3>
+
+<ol>
+<li>编译器(compiler)就是将一种语言编写的程序翻译成另一种语言编写的程序
+<img src="media/15953908368697/15953971601586.jpg" alt=""/>
+目标程序可以被调用并产生输出
+<img src="media/15953908368697/15953973411000.jpg" alt=""/></li>
+<li><p>解释器(interpreter)直接利用源程序将输入映射成为输出. <br/>
+<img src="media/15953908368697/15953975695267.jpg" alt=""/></p>
+<blockquote>
+<p>对比编译器和解释器: 编译器生成的目标程序比解释器快, 解释器的错误诊断效果比编译器好</p>
+</blockquote></li>
+<li><p>混合编译器. 如JAVA, JAVA源程序先被编译为字节码(bytecode), 而后由虚拟机对字节码进行解释<br/>
+ <img src="media/15953908368697/15953978574478.jpg" alt=""/></p>
+<blockquote>
+<p>字节码的优点: 字节码有更好的跨平台的通用性<br/>
+JIT编译器: 有些被称为即时 （just in time）编译器的Java编译器在运行中间程序处理输入的前一刻首先把字节码翻译成为机器语言，然后再执行程序</p>
+</blockquote></li>
+</ol>
+
+<p><strong><em>一个语言处理系统的流程</em></strong><br/>
+<img src="media/15953908368697/15954005261816.jpg" alt=""/></p>
+
+<p>预处理器(preprocessor)负责两项工作:</p>
+
+<ol>
+<li>将分割成多个模块的源程序聚合起来</li>
+<li>将宏转化为源语言语句</li>
+</ol>
+
+<h3 id="toc_2">1.2　一个编译器的结构</h3>
+
+<p><strong><em>一个编译器的各个步骤</em></strong><br/>
+<img src="media/15953908368697/15954068200383.jpg" alt=""/></p>
+
+<h4 id="toc_3">1.2.1　词法分析</h4>
+
+<blockquote>
+<p>词法分析(exical analysis)是编译器的第一个步骤, 又被称为扫描(scanning).<br/>
+通过词法分析器将字符流转化成为有意义的词素(lexeme)的序列.<br/>
+而词素会被表示为形如<code>&lt;token-name, attribute-value&gt;</code>的词法单元(token)</p>
+</blockquote>
+
+<p>源程序<br/>
+position = initial + rate * 60<br/>
+经过词法分析后被表示为<br/>
+<id. 1> &lt;=&gt; <id, 2> &lt;+&gt; <id, 3> &lt;*&gt; <60></p>
+
+<p><strong><em>一个赋值语句的翻译</em></strong><br/>
+<img src="media/15953908368697/15954091199027.jpg" alt=""/></p>
+
+<h4 id="toc_4">1.2.2　语法分析</h4>
+
+<blockquote>
+<p>语法分析(syntax analysis)是编译器的第二个步骤, 又被称为解析(parsing).<br/>
+语法分析器使用由词法分析器生成的各个词法单元的第一个分量来创建树形的中间表示</p>
+</blockquote>
+
+<h4 id="toc_5">1.2.3　语义分析</h4>
+
+<blockquote>
+<p>语义分析器(semantic analyzer)使用<code>语法树</code>和<code>符号表</code>中的信息来检查源程序是否和语言定义的语义一致。它同时也收集类型信息，并把这些信息存放在语法树或符号表中，以便在随后的中间代码生成过程中使用。</p>
+</blockquote>
+
+<p>语义分析阶段的工作内容有:</p>
+
+<ol>
+<li>类型检查(type checking): 编译器检查每个运算符是否具有匹配的运算分量。比如，数组下表必须是整数类型。</li>
+<li>自动类型转换(coercion)</li>
+</ol>
+
+<h4 id="toc_6">1.2.4　中间代码生成</h4>
+
+<p>中间表示在源程序翻译成目标代码的过程中, 可能有一个或多个<br/>
+中间表示有多种形式, 如:语法树和三地址代码(three-address code), 其中语法树常用在语法分析和语义分析中<br/>
+三地址代码,例如<br/>
+<img src="media/15953908368697/15954754764667.jpg" alt=""/><br/>
+有三个特点</p>
+
+<ol>
+<li>每个三地址赋值指令的右部最多只有一个运算符</li>
+<li>编译器应该生成一个临时名字以存放一个三地址指令计算得到的值</li>
+<li>有些三地址指令的运算分量的少于三个（比如上面的序列1.3中的第一个和最后一个指令）</li>
+</ol>
+
+<h4 id="toc_7">1.2.5　代码优化</h4>
+
+<p>机器无关的代码优化通过改进中间代码使代码更快或者更短/能耗更低</p>
+
+<h4 id="toc_8">1.2.6　代码生成</h4>
+
+<p>将中间表示形式映射为目标语言<br/>
+合理分配寄存器以存放变量的值</p>
+
+<h4 id="toc_9">1.2.7　符号表管理</h4>
+
+<p>记录源程序中使用的变量的名字，并收集和每个名字的各种属性有关的信息</p>
+
+<h4 id="toc_10">1.2.8　将多个步骤组合成趟</h4>
+
+<p>在一个特定的实现中，多个步骤的活动可以被组合成一趟 （pass）<br/>
+<img src="media/15953908368697/15954832966282.jpg" alt=""/><br/>
+前端可以和不同的后端组合</p>
+
+<h4 id="toc_11">1.2.9　编译器构造工具</h4>
+
+<p>一些常用的编译器构造工具包括：</p>
+
+<ol>
+<li>语法分析器的生成器： 可以根据一个程序设计语言的语法描述自动生成语法分析器。</li>
+<li>扫描器的生成器： 可以根据一个语言的语法单元的正则表达式描述生成词法分析器。</li>
+<li>语法制导的翻译引擎： 可以生成一组用于遍历分析树并生成中间代码的例程。</li>
+<li>代码生成器的生成器： 依据一组关于如何把中间语言的每个运算翻译成为目标机上的机器语言的规则，生成一个代码生成器。</li>
+<li>数据流分析引擎： 可以帮助收集数据流信息，即程序中的值如何从程序的一个部分传递到另一部分。数据流分析是代码优化的一个重要部分。</li>
+<li>编译器构造工具集： 提供了可用于构造编译器的不同阶段的例程的完整集合。</li>
+</ol>
+
+<h3 id="toc_12">1.3　程序设计语言的发展历程</h3>
+
+<h4 id="toc_13">1.3.1　走向高级程序设计语言</h4>
+
+<p>语言的分类:<br/>
+根据代分类</p>
+
+<ol>
+<li>第一代语言 是机器语言，</li>
+<li>第二代语言 是汇编语言，</li>
+<li>第三代语言 是Fortran、Cobol、Lisp、C、C++、C#及Java这样的高级程序设计语言。</li>
+<li>第四代语言 是为特定应用设计的语言，比如用于生成报告的NOMAD，用于数据库查询的SQL和用于文本排版的Postscript。</li>
+<li>第五代语言 指的是基于逻辑和约束的语言，比如Prolog和OPS5。</li>
+</ol>
+
+<p>强制式 （imperative）语言<br/>
+声明式 （declarative）语言<br/>
+冯·诺伊曼语言 （von Neumann language）<br/>
+面向对象语言 （object-oriented language）<br/>
+脚本语言 （scripting language）</p>
+
+<h4 id="toc_14">1.3.2　对编译器的影响</h4>
+
+<h3 id="toc_15">1.4　构建一个编译器的相关科学</h3>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[在Rust中调用Go动态库]]></title>
@@ -2086,332 +2371,6 @@ slave.get(&#39;name&#39;) // 从slave获取该值
 <p>MySQL的授权语句可以对库级别和表级别进行不同权限的细化的权限管理。</p>
 
 <p>需要注意的是服务器使用的用户需要在Proxysql和MySQL同时进行注册才能够正常的使用。</p>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[数据库版本控制工具——flyway的安装与使用]]></title>
-    <link href="http://qwerkael.cn/15934275012885.html"/>
-    <updated>2020-06-29T18:45:01+08:00</updated>
-    <id>http://qwerkael.cn/15934275012885.html</id>
-    <content type="html"><![CDATA[
-<h2 id="toc_0">安装：</h2>
-
-<p>在该页面选择需要安装的包下载</p>
-
-<p><a href="https://flywaydb.org/getstarted/download">https://flywaydb.org/getstarted/download</a></p>
-
-<p>本次我们安装的是<code>Command-line tool</code></p>
-
-<p>只需要解压就行，解压缩目录下会有两个可执行文件<code>flyway</code>和<code>flyway.cmd</code></p>
-
-<h2 id="toc_1">配置：</h2>
-
-<p>目录结构如下<br/>
-<img src="media/15934275012885/15934275394895.jpg" alt=""/></p>
-
-<p>安装目录下的<code>conf/flyway.conf</code>是配置文件</p>
-
-<p>你也可以在别处建立配置文件</p>
-
-<p>如果在执行<code>flyway</code>命令时没有使用 <code>-configFile</code> 参数指定配置文件的话，配置文件会以以下顺序加载</p>
-
-<blockquote>
-<p>/conf/flyway.conf<br/>
-/flyway.conf<br/>
-/flyway.conf</p>
-</blockquote>
-
-<p>后面加载的配置会覆盖前面加载的配置</p>
-
-<p>我们还可以使用 <code>-X</code> 参数，输出<code>debug</code>信息</p>
-
-<p>使用 <code>-q</code> 参数，不打印输出（<code>errors</code> 和 <code>warnings</code> 除外）</p>
-
-<h2 id="toc_2">使用：</h2>
-
-<p><code>flyway</code>有6个基本命令</p>
-
-<p><code>migrate</code>、<code>clean</code>、<code>info</code>、<code>validate</code>、<code>baseline</code>、<code>repair</code></p>
-
-<p><code>migrate</code>：把数据库的表结构升级到最新版。会根据你提供是SQL文件升级。SQL文件默认存储在安装路径下的sql目录（该目录可以根据 <code>flyway.locations</code> 参数修改）。<code>migrate</code>会扫描该目录下的“.sql”文件，并根据文件名获取版本和描述信息。文件名的前缀有两种“V”和“R”。“V”代表<code>versioned</code>，指用于版本控制的文件；“R”代表<code>repeatable</code>，指可以重复执行的文件。“V”后面跟版本号，版本号是用点（.）或者下划线（_）分割的数字。前缀或者版本号与描述之间用双下划线（__）分割。</p>
-
-<p><code>clean</code>：clean会将 flyway.schemas 中配置的数据库全部清空。</p>
-
-<p><code>info</code>：显示版本、描述、执行时间和状态的信息。</p>
-
-<p><code>validate</code>：对已经应用的migrations进行校验。</p>
-
-<p><code>baseline</code>：如果指定的数据库已经有表结构存在了，需要使用baseline初始化 schema_version 表的信息。</p>
-
-<p><code>repair</code>：修复 schema_version 表。</p>
-
-<h2 id="toc_3">说明：</h2>
-
-<p><code>Versioned migrations</code> 和 <code>Repeatable migrations</code>。即前缀为“V”和“R”的<code>migrations</code>。<code>Versioned migrations</code>是将自身的版本号和<code>schema_version</code>的最新版本号比较来决定是否执行的，<code>Versioned migrations</code>的版本号比<code>schema_version</code>的最新版本号高的将执行。<code>Repeatable migrations</code>则是和<code>schema_version</code>中的<code>checksum</code>进行比较，如果脚本名称和<code>checksum</code>值都相同，则不执行。</p>
-
-<h2 id="toc_4">不足：</h2>
-
-<p>不支持回滚</p>
-
-<p><code>flyway</code>更适合单一服务的版本迭代，如果是多个服务并行开发，甚至在上线前都无法确定哪些服务需要上线，<code>flyway</code>的版本控制则会制约数据库的版本迭代</p>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[使用ProxySQL做数据库审计]]></title>
-    <link href="http://qwerkael.cn/15934268201877.html"/>
-    <updated>2020-06-29T18:33:40+08:00</updated>
-    <id>http://qwerkael.cn/15934268201877.html</id>
-    <content type="html"><![CDATA[
-<h2 id="toc_0">为什么要使用中间件做审计</h2>
-
-<p>数据库审计是数据库运维中的一项重要手段，mysql的主流发行版本都提供有各种数据库审计的插件。</p>
-
-<p><code>Oracle</code>公司对<code>MySQL企业版</code>提供了官方的审计插件。</p>
-
-<p><code>Mcafee</code>公司也对<code>MySQL</code>提供了相应的<a href="https://github.com/mcafee/mysql-audit">审计插件</a>。</p>
-
-<p><a href="https://www.percona.com/doc/percona-server/LATEST/management/audit_log_plugin.html"><code>Percona</code></a>和<a href="https://mariadb.com/kb/en/library/mariadb-audit-plugin-log-settings/"><code>MariaDB</code></a>也分别有官方提供的审计插件。</p>
-
-<p>但是<code>审计插件</code>的使用会有一定的性能开销，并且也存着相应的风险。</p>
-
-<p>但是如果我们使用了中间件后，在中间件中对<code>MySQL</code>做审计，则完全没有了这样的顾虑。</p>
-
-<h2 id="toc_1">使用proxysql做审计</h2>
-
-<p>使用<code>proxysql</code>做审计的思路很简单，在<code>proxysql</code>的转发规则中我们可以设置对指定规则记录日志。那么我们就可以对一些敏感操作进行审计。</p>
-
-<p>首先，我们来创建一个存放日志的目录：</p>
-
-<pre><code class="language-shell">mkdir -p /data/ProxySQL/log
-</code></pre>
-
-<p>然后在<code>ProxySQL</code>中配置日志的地址</p>
-
-<pre><code class="language-shell"># 首先进入管理端口：
-$ mysql -uadmin -padmin -h127.0.0.1 -P6032
-# 然后设置变量，并加载和持久化：
-set mysql-eventslog_filename = ‘/data/ProxySQL/log/sql.log’
-LOAD MYSQL VARIABLES TO RUNTIME;
-SAVE MYSQL VARIABLES TO DISK;
-</code></pre>
-
-<p>在<code>mysql_query_rules</code>表中设置路由规则</p>
-
-<pre><code class="language-sql"># 记录所有delete操作
-Insert into mysql_query_rules(rule_id,active,match_digest,log,apply) values(1000,1,’^delete’,1,1)
-</code></pre>
-
-<p>这样，所有通过<code>proxysql</code>的<code>delete</code>操作都会记入日志</p>
-
-<p>但是<code>proxysql</code>的日志时二进制格式的，我们需要通过<code>proxysql</code>提供的一个工具<code>eventslog_reader_sample</code>进行解析</p>
-
-<p>但是我们安装的rpm包里并没有这个工具，我们需要单独下载并编译它</p>
-
-<p>在 <a href="https://github.com/sysown/proxysql/tree/v1.4.2/tools">https://github.com/sysown/proxysql/tree/v1.4.2/tools</a> 我们可以看到<code>eventslog_reader_sample.cpp</code>和<code>Makefile</code>文件</p>
-
-<p>我们需要下载并make一下，就可以生成可用的工具了。</p>
-
-<h3 id="toc_2">tips</h3>
-
-<p>我在编译<code>eventslog_reader_sample</code>的时候遇到了一些问题，在编译好以后使用<code>eventslog_reader_sample</code>解析二进制log时会报错</p>
-
-<p>这可能和<code>proxysql</code>的版本有关系，在<code>eventslog_reader_sample</code>执行时会判断<code>log</code>文件的第一个字节是否为<code>0x00</code>，而我输出的<code>log</code>都是以<code>0x81</code>开头的。所以总会报错。</p>
-
-<p>解决的方法是修改cpp文件，我直接将99-105行的判断</p>
-
-<pre><code class="language-cpp">switch (et) {
-  case PROXYSQL_QUERY:
-    read_query(f);
-    break;
-  default:
-    break;
-}
-</code></pre>
-
-<p>给去掉了，直接改成了</p>
-
-<pre><code class="language-cpp">read_query(f);
-</code></pre>
-
-<p>再进行编译，然后就可以用了。</p>
-
-<p>以上。</p>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ProxySQL安装与配置]]></title>
-    <link href="http://qwerkael.cn/15934252934518.html"/>
-    <updated>2020-06-29T18:08:13+08:00</updated>
-    <id>http://qwerkael.cn/15934252934518.html</id>
-    <content type="html"><![CDATA[
-<h2 id="toc_0">安装</h2>
-
-<ul>
-<li>从<a href="https://github.com/sysown/proxysql/releases">github</a>上下载相应的rpm包</li>
-<li>使用 yum localinstall proxysql-1.4.1-1-centos7.x86_64.rpm 安装</li>
-</ul>
-
-<h2 id="toc_1">启动</h2>
-
-<ul>
-<li>Service proxysql start</li>
-</ul>
-
-<h2 id="toc_2">配置文件</h2>
-
-<ul>
-<li>文本配置文件
-<ul>
-<li>ProxyQSL使用一个配置文件的（/etc/proxysql.cnf），但是这个配置文件只在第一次启动时使用，一般不需要修改</li>
-</ul></li>
-<li>SQLite配置文件
-<ul>
-<li>ProxySQL在第一次启动后就会使用SQLite文件（/var/lib/proxysql/proxysql.db）来加载和持久化配置项，并且这种配置方式支持在线修改</li>
-</ul></li>
-</ul>
-
-<h2 id="toc_3">登录</h2>
-
-<ul>
-<li>ProxySQL默认的管理端口是6032</li>
-<li>ProxySQL默认的服务端口是6033</li>
-<li>ProxySQL默认的用户名和密码都是admin</li>
-</ul>
-
-<h2 id="toc_4">库结构</h2>
-
-<ul>
-<li><p>登录到管理端口，使用show databases;<br/>
-<img src="media/15934252934518/15934254906231.jpg" alt=""/></p></li>
-<li><p>在管理端口中有4个库，分别是：</p>
-<ul>
-<li><p><code>Admin</code>：默认数据库，存放服务器、用户、路由等的配置信息。以”runtime_“开头的表是当前运行中的配置，不能直接修改。通过修改没有前缀的表，使用”LOAD“加载配置，使用”SAVE“持久化配置。</p></li>
-<li><p><code>Disk</code>：存储配置的SQLite数据库</p></li>
-<li><p><code>Stats</code>：各种命令的统计信息</p></li>
-<li><p><code>Monitor</code>：对于后端数据库的监控信息</p></li>
-</ul></li>
-</ul>
-
-<h2 id="toc_5">配置表</h2>
-
-<ul>
-<li><p>各种配置所使用到的表都在main库中</p>
-<pre><code class="language-sql">mysql&gt; show tables from main;
-</code></pre>
-<table>
-<thead>
-<tr>
-<th>tables</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>global_variables</td>
-<td>全局变量，，具体可见<a href="https://github.com/sysown/proxysql/wiki/Global-variables">https://github.com/sysown/proxysql/wiki/Global-variables</a></td>
-</tr>
-<tr>
-<td>mysql_collations</td>
-<td>字符集相关</td>
-</tr>
-<tr>
-<td>mysql_group_replication_hostgroups</td>
-<td>MySQL Group Replication信息</td>
-</tr>
-<tr>
-<td>mysql_query_rules</td>
-<td>路由规则信息</td>
-</tr>
-<tr>
-<td>mysql_replication_hostgroups</td>
-<td>定义hostgroup的主从信息</td>
-</tr>
-<tr>
-<td>mysql_servers</td>
-<td>后端MySQL节点</td>
-</tr>
-<tr>
-<td>mysql_users</td>
-<td>用户配置</td>
-</tr>
-<tr>
-<td>proxysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_global_variables</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_group_replication_hostgroups</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_query_rules</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_replication_hostgroups</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_mysql_users</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_proxysql_servers</td>
-<td></td>
-</tr>
-<tr>
-<td>runtime_scheduler</td>
-<td></td>
-</tr>
-<tr>
-<td>scheduler</td>
-<td>定时器</td>
-</tr>
-</tbody>
-</table></li>
-<li><p>数据库节点设置（mysql_servers）</p>
-<ul>
-<li>这张表主要配置hostgroup的相关信息。路由时会根据设置的规则将相关SQL路由到指定的hostgroup。而在同一hostgroup中又根据权重分发SQL语句。</li>
-</ul></li>
-<li><p>用户设置（mysql_users）</p>
-<ul>
-<li>配置客户端连接proxysql（frontend）和proxysql连接数据库（backend）的用户。目前这两个值都默认为1。以后可能会分开。</li>
-</ul></li>
-<li><p>主从关系设置（mysql_replication_hostgroups）</p>
-<ul>
-<li>根据read_only值来判断主从。可以不配置。</li>
-</ul></li>
-<li><p>路由规则设置（mysql_query_rules）</p>
-<ul>
-<li><p>Proxysql会根据主键rule_id的顺序加载路由规则。</p></li>
-<li><p>Username/client_addr/schemaname：只有用户、地址和schema匹配时规则才会生效。</p></li>
-<li><p>Proxysql会先检查flagIN=0的规则</p></li>
-<li><p>如果规则匹配，且flagIN=flagOUT或者flagOUT=NULL或者apply=1，则应用这条规则；否则，根据flagOUT的值，去匹配下一条flagIN等于该值的规则</p></li>
-<li><p>Digest/match_digest/match_pattern：这三个值都是用来匹配查询的。</p>
-<ul>
-<li><p>Digest匹配的值类似于stats_mysql_query_digest表中的digest列<br/>
-<img src="media/15934252934518/15934261421202.jpg" alt=""/></p></li>
-<li><p>Match_digest匹配的值类似于stats_mysql_query_digest中的digest_text列<br/>
-<img src="media/15934252934518/15934261697335.jpg" alt=""/></p></li>
-<li><p>Match_pattern匹配的是未经修改过的SQL语句</p></li>
-</ul></li>
-<li><p>Negate_match_pattern：对match_digest/match_pattern的匹配值取反</p></li>
-<li><p>重写SQL：重写SQL最好使用match_pattern作为匹配项，使用replace_pattern作为重写后的SQL，二者都遵循正则表达式</p></li>
-</ul></li>
-</ul>
 
 ]]></content>
   </entry>

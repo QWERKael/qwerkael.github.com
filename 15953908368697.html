@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+      
+    <编译原理>读书笔记 - 阿勒西的小屋
+    
+    </title>
+    
+
+    
+    
+    <link href="atom.xml" rel="alternate" title="阿勒西的小屋" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/style.min.css">
+    <link rel="stylesheet" href="asset/css/doc.css">
+    <script src="asset/app.js"></script>
+</head>
+  <body>
+    <section class="hero">
+      <div class="hero-head">
+          <nav class="navbar" role="navigation" aria-label="main navigation">
+              <div class="container">
+              <div class="navbar-brand">
+                
+                <a target="self" class="navbar-item " href="index.html">Home</a>
+                
+                <a target="_self" class="navbar-item " href="archives.html">Archives</a>
+                
+
+                <a role="button" id="navbarSNSRssSwitchBtn" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarSNSRssButtons">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                </a>
+              </div>
+            
+              <div id="navbarSNSRssButtons" class="navbar-menu">
+                <div class="navbar-start">
+                  
+                </div>
+            
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <!--buttons start-->
+                    <div class="buttons">
+                      
+                        
+                        
+                        
+                        
+                      
+                      <a href="atom.xml" target="_blank" title="RSS">
+                          <span class="icon is-large has-text-black-bis">
+                              <svg class="svg-inline--fa fa-rss fa-w-14 fa-lg" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rss" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"></path></svg><!-- <i class="fas fa-rss fa-lg"></i> -->
+                          </span>
+                      </a>
+                    </div>
+                    <!--buttons end-->
+
+                  </div>
+                </div>
+                </div>
+              </div>
+            </nav>
+      </div>
+
+ <div class="hero-body ct-body"></div>
+      
+    </section>
+    <section class="ct-body">
+      <div class="container">
+          <div class="columns is-variable bd-klmn-columns is-4 is-centered">
+              <div class="column is-four-fifths">
+                  <div class="post-body single-content">
+                    
+                    <h1 class="title">
+                            <编译原理>读书笔记   
+                      </h1>
+                     
+                    
+                      <div class="media">
+                            
+                            <div class="media-content">
+                              <div class="content">
+                                <p>
+                                 <span class="date">2020/07/22</span>
+                                  <span class="tran-posted-in">posted in</span>&nbsp; 
+                                  
+                                      <span class="posted-in"><a href='%E7%BC%96%E8%AF%91%E5%8E%9F%E7%90%86.html'>编译原理</a></span>
+                                         
+                                  
+
+                                   
+                                      
+                                  <br />
+                                  <span class="tran-tags">Tags:</span>&nbsp;
+                                     
+
+                                </p>
+                              </div>
+                            </div>
+                         
+                    </div>
+                </div>
+                  <article class="markdown-body single-content">
+                    <h2 id="toc_0">第一章 引论</h2>
+
+<h3 id="toc_1">1.1　语言处理器</h3>
+
+<ol>
+<li>编译器(compiler)就是将一种语言编写的程序翻译成另一种语言编写的程序
+<img src="media/15953908368697/15953971601586.jpg" alt=""/>
+目标程序可以被调用并产生输出
+<img src="media/15953908368697/15953973411000.jpg" alt=""/></li>
+<li><p>解释器(interpreter)直接利用源程序将输入映射成为输出. <br/>
+<img src="media/15953908368697/15953975695267.jpg" alt=""/></p>
+<blockquote>
+<p>对比编译器和解释器: 编译器生成的目标程序比解释器快, 解释器的错误诊断效果比编译器好</p>
+</blockquote></li>
+<li><p>混合编译器. 如JAVA, JAVA源程序先被编译为字节码(bytecode), 而后由虚拟机对字节码进行解释<br/>
+ <img src="media/15953908368697/15953978574478.jpg" alt=""/></p>
+<blockquote>
+<p>字节码的优点: 字节码有更好的跨平台的通用性<br/>
+JIT编译器: 有些被称为即时 （just in time）编译器的Java编译器在运行中间程序处理输入的前一刻首先把字节码翻译成为机器语言，然后再执行程序</p>
+</blockquote></li>
+</ol>
+
+<p><strong><em>一个语言处理系统的流程</em></strong><br/>
+<img src="media/15953908368697/15954005261816.jpg" alt=""/></p>
+
+<p>预处理器(preprocessor)负责两项工作:</p>
+
+<ol>
+<li>将分割成多个模块的源程序聚合起来</li>
+<li>将宏转化为源语言语句</li>
+</ol>
+
+<h3 id="toc_2">1.2　一个编译器的结构</h3>
+
+<p><strong><em>一个编译器的各个步骤</em></strong><br/>
+<img src="media/15953908368697/15954068200383.jpg" alt=""/></p>
+
+<h4 id="toc_3">1.2.1　词法分析</h4>
+
+<blockquote>
+<p>词法分析(exical analysis)是编译器的第一个步骤, 又被称为扫描(scanning).<br/>
+通过词法分析器将字符流转化成为有意义的词素(lexeme)的序列.<br/>
+而词素会被表示为形如<code>&lt;token-name, attribute-value&gt;</code>的词法单元(token)</p>
+</blockquote>
+
+<p>源程序<br/>
+position = initial + rate * 60<br/>
+经过词法分析后被表示为<br/>
+<id. 1> &lt;=&gt; <id, 2> &lt;+&gt; <id, 3> &lt;*&gt; <60></p>
+
+<p><strong><em>一个赋值语句的翻译</em></strong><br/>
+<img src="media/15953908368697/15954091199027.jpg" alt=""/></p>
+
+<h4 id="toc_4">1.2.2　语法分析</h4>
+
+<blockquote>
+<p>语法分析(syntax analysis)是编译器的第二个步骤, 又被称为解析(parsing).<br/>
+语法分析器使用由词法分析器生成的各个词法单元的第一个分量来创建树形的中间表示</p>
+</blockquote>
+
+<h4 id="toc_5">1.2.3　语义分析</h4>
+
+<blockquote>
+<p>语义分析器(semantic analyzer)使用<code>语法树</code>和<code>符号表</code>中的信息来检查源程序是否和语言定义的语义一致。它同时也收集类型信息，并把这些信息存放在语法树或符号表中，以便在随后的中间代码生成过程中使用。</p>
+</blockquote>
+
+<p>语义分析阶段的工作内容有:</p>
+
+<ol>
+<li>类型检查(type checking): 编译器检查每个运算符是否具有匹配的运算分量。比如，数组下表必须是整数类型。</li>
+<li>自动类型转换(coercion)</li>
+</ol>
+
+<h4 id="toc_6">1.2.4　中间代码生成</h4>
+
+<p>中间表示在源程序翻译成目标代码的过程中, 可能有一个或多个<br/>
+中间表示有多种形式, 如:语法树和三地址代码(three-address code), 其中语法树常用在语法分析和语义分析中<br/>
+三地址代码,例如<br/>
+<img src="media/15953908368697/15954754764667.jpg" alt=""/><br/>
+有三个特点</p>
+
+<ol>
+<li>每个三地址赋值指令的右部最多只有一个运算符</li>
+<li>编译器应该生成一个临时名字以存放一个三地址指令计算得到的值</li>
+<li>有些三地址指令的运算分量的少于三个（比如上面的序列1.3中的第一个和最后一个指令）</li>
+</ol>
+
+<h4 id="toc_7">1.2.5　代码优化</h4>
+
+<p>机器无关的代码优化通过改进中间代码使代码更快或者更短/能耗更低</p>
+
+<h4 id="toc_8">1.2.6　代码生成</h4>
+
+<p>将中间表示形式映射为目标语言<br/>
+合理分配寄存器以存放变量的值</p>
+
+<h4 id="toc_9">1.2.7　符号表管理</h4>
+
+<p>记录源程序中使用的变量的名字，并收集和每个名字的各种属性有关的信息</p>
+
+<h4 id="toc_10">1.2.8　将多个步骤组合成趟</h4>
+
+<p>在一个特定的实现中，多个步骤的活动可以被组合成一趟 （pass）<br/>
+<img src="media/15953908368697/15954832966282.jpg" alt=""/><br/>
+前端可以和不同的后端组合</p>
+
+<h4 id="toc_11">1.2.9　编译器构造工具</h4>
+
+<p>一些常用的编译器构造工具包括：</p>
+
+<ol>
+<li>语法分析器的生成器： 可以根据一个程序设计语言的语法描述自动生成语法分析器。</li>
+<li>扫描器的生成器： 可以根据一个语言的语法单元的正则表达式描述生成词法分析器。</li>
+<li>语法制导的翻译引擎： 可以生成一组用于遍历分析树并生成中间代码的例程。</li>
+<li>代码生成器的生成器： 依据一组关于如何把中间语言的每个运算翻译成为目标机上的机器语言的规则，生成一个代码生成器。</li>
+<li>数据流分析引擎： 可以帮助收集数据流信息，即程序中的值如何从程序的一个部分传递到另一部分。数据流分析是代码优化的一个重要部分。</li>
+<li>编译器构造工具集： 提供了可用于构造编译器的不同阶段的例程的完整集合。</li>
+</ol>
+
+<h3 id="toc_12">1.3　程序设计语言的发展历程</h3>
+
+<h4 id="toc_13">1.3.1　走向高级程序设计语言</h4>
+
+<p>语言的分类:<br/>
+根据代分类</p>
+
+<ol>
+<li>第一代语言 是机器语言，</li>
+<li>第二代语言 是汇编语言，</li>
+<li>第三代语言 是Fortran、Cobol、Lisp、C、C++、C#及Java这样的高级程序设计语言。</li>
+<li>第四代语言 是为特定应用设计的语言，比如用于生成报告的NOMAD，用于数据库查询的SQL和用于文本排版的Postscript。</li>
+<li>第五代语言 指的是基于逻辑和约束的语言，比如Prolog和OPS5。</li>
+</ol>
+
+<p>强制式 （imperative）语言<br/>
+声明式 （declarative）语言<br/>
+冯·诺伊曼语言 （von Neumann language）<br/>
+面向对象语言 （object-oriented language）<br/>
+脚本语言 （scripting language）</p>
+
+<h4 id="toc_14">1.3.2　对编译器的影响</h4>
+
+<h3 id="toc_15">1.4　构建一个编译器的相关科学</h3>
+
+                  </article>
+                  <div class="comments-wrap">
+                    <div class="share-comments">
+                      
+
+                      
+
+                      
+                    </div>
+                  </div><!-- end comments wrap -->
+              </div>
+            </div><!-- end columns -->
+      </div><!-- end container -->
+    </section>
+
+
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+          <p>
+              Copyright &copy; 2019
+              Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+              Theme used <a target="_blank" href="https://bulma.io/">Bulma CSS</a>.
+          </p>
+        </div>
+      </footer>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+
+
+
+
+  </body>
+</html>
